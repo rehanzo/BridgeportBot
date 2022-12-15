@@ -1,0 +1,4 @@
+.env
+session.json
+*.sqlite3
+js/
