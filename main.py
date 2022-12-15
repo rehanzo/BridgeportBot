@@ -1,43 +1,9 @@
 from fbchat import log, Client, MessageReaction
-from sqlitedict import SqliteDict
 from fbchat.models import *
 import dotenv
 import os
-
+import db
 import json
-
-def save(key, value, cache_file="cache.sqlite3"):
-    try:
-        with SqliteDict(cache_file) as db:
-            db[key] = value # Using dict[key] to store
-            db.commit() # Need to commit() to actually flush the data
-    except Exception as ex:
-        print("Error during storing data (Possibly unsupported):", ex)
-
-def load(key, cache_file="cache.sqlite3"):
-    try:
-        with SqliteDict(cache_file) as db:
-            value = db[key] # No need to use commit(), since we are only loading data!
-        return value
-    except Exception as ex:
-        print("Error during loading data:", ex)
-
-def clear(key, cache_file="cache.sqlite3"):
-    try:
-        with SqliteDict(cache_file) as db:
-            db.pop(key)
-            db.commit() # Need to commit() to actually flush the data
-    except Exception as ex:
-        print("Error during loading data:", ex)
-
-def namesStr(cache_file="cache.sqlite3"):
-    try:
-        with SqliteDict(cache_file) as db:
-            pre = "  - "
-            finalStr = pre + ("\n" + pre).join(db.keys())
-        return finalStr
-    except Exception as ex:
-        print("Error during loading data:", ex)
 
 def gptResponse(query):
     return {"message" : "GPT functionality not supported as of yet."}
@@ -64,7 +30,7 @@ class EchoBot(Client):
 
                 note_name = words.pop(0)
                 note_content = " ".join(words)
-                save(note_name, note_content, "notes.sqlite3")
+                db.save(note_name, note_content, "notes.sqlite3")
                 self.send(Message(text=(note_name + " has been set.")), thread_id=thread_id, thread_type=thread_type)
             elif message.startswith("!notes get"):
                 words = message.split()
@@ -72,10 +38,10 @@ class EchoBot(Client):
                 words.pop(0)
 
                 note_name = words.pop(0)
-                send = load(note_name, "notes.sqlite3")
+                send = db.load(note_name, "notes.sqlite3")
                 self.send(Message(text=send), thread_id=thread_id, thread_type=thread_type)
             elif message.startswith("!notes list"):
-                send = namesStr("notes.sqlite3")
+                send = db.keysList("notes.sqlite3")
                 send = "Notes:\n" + send
                 self.send(Message(text=send), thread_id=thread_id, thread_type=thread_type)
             elif message.startswith("!notes clear"):
@@ -84,7 +50,7 @@ class EchoBot(Client):
                 words.pop(0)
 
                 note_name = words.pop(0)
-                clear(note_name, "notes.sqlite3")
+                db.clear(note_name, "notes.sqlite3")
 
                 self.send(Message(text=(note_name + " has been cleared.")), thread_id=thread_id, thread_type=thread_type)
             elif message.startswith("!gpt"):
