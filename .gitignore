@@ -2,3 +2,4 @@
 session.json
 *.sqlite3
 js/
+__pycache__/
