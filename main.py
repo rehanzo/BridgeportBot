@@ -1,5 +1,3 @@
-# -*- coding: UTF-8 -*-
-
 from fbchat import log, Client, MessageReaction
 from sqlitedict import SqliteDict
 from fbchat.models import *
@@ -24,6 +22,14 @@ def load(key, cache_file="cache.sqlite3"):
     except Exception as ex:
         print("Error during loading data:", ex)
 
+def clear(key, cache_file="cache.sqlite3"):
+    try:
+        with SqliteDict(cache_file) as db:
+            db.pop(key)
+            db.commit() # Need to commit() to actually flush the data
+    except Exception as ex:
+        print("Error during loading data:", ex)
+
 def namesStr(cache_file="cache.sqlite3"):
     try:
         with SqliteDict(cache_file) as db:
@@ -32,6 +38,9 @@ def namesStr(cache_file="cache.sqlite3"):
         return finalStr
     except Exception as ex:
         print("Error during loading data:", ex)
+
+def gptResponse(query):
+    return {"message" : "GPT functionality not supported as of yet."}
 
 # Subclass fbchat.Client and override required methods
 class EchoBot(Client):
@@ -56,7 +65,8 @@ class EchoBot(Client):
                 note_name = words.pop(0)
                 note_content = " ".join(words)
                 save(note_name, note_content, "notes.sqlite3")
-            if message.startswith("!notes get"):
+                self.send(Message(text=(note_name + " has been set.")), thread_id=thread_id, thread_type=thread_type)
+            elif message.startswith("!notes get"):
                 words = message.split()
                 words.pop(0)
                 words.pop(0)
@@ -64,10 +74,26 @@ class EchoBot(Client):
                 note_name = words.pop(0)
                 send = load(note_name, "notes.sqlite3")
                 self.send(Message(text=send), thread_id=thread_id, thread_type=thread_type)
-            if message.startswith("!notes list"):
+            elif message.startswith("!notes list"):
                 send = namesStr("notes.sqlite3")
                 send = "Notes:\n" + send
                 self.send(Message(text=send), thread_id=thread_id, thread_type=thread_type)
+            elif message.startswith("!notes clear"):
+                words = message.split()
+                words.pop(0)
+                words.pop(0)
+
+                note_name = words.pop(0)
+                clear(note_name, "notes.sqlite3")
+
+                self.send(Message(text=(note_name + " has been cleared.")), thread_id=thread_id, thread_type=thread_type)
+            elif message.startswith("!gpt"):
+                words = message.split()
+                words.pop(0)
+
+                query = " ".join(words)
+                response = gptResponse(query)
+                self.send(Message(text=response["message"]), thread_id=thread_id, thread_type=thread_type)
 
 
 cookies = {}
