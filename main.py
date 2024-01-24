@@ -71,8 +71,21 @@ class BPBot(Client):
                 if len(words) >= limit:
                     message = "Prompt too long (over {} words)".format(limit)
                 else:
-                    response = chat.gptResponse(query)
+                    response = chat.chatResponse(query)
                     message = Message(text=response)
+
+                self.send(message, thread_id=thread_id, thread_type=thread_type)
+
+            elif message.startswith("!tyco"):
+                words.pop(0)
+
+                if chat == None:
+                    chat = Chat()
+
+                query = " ".join(words)
+
+                response = chat.tycoResponse(query)
+                message = Message(text=response)
 
                 self.send(message, thread_id=thread_id, thread_type=thread_type)
 
