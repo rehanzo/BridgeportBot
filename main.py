@@ -1,7 +1,7 @@
 from fbchat import log, Client, MessageReaction
 from fbchat.models import *
 from chat import *
-from summarizer import summarize
+from kagi import summarize, search
 import os
 import db
 import json
@@ -80,13 +80,26 @@ class BPBot(Client):
                 words.pop(0)
 
                 url = " ".join(words)
-                # print("IN!")
-                # print("{}".format(url))
 
                 response = summarize(url)
                 message = Message(text=response)
 
                 self.send(message, thread_id=thread_id, thread_type=thread_type)
+
+            elif message.startswith("!search"):
+                words.pop(0)
+
+                url = " ".join(words)
+
+                response = search(url)
+                message = Message(text=response)
+
+                self.send(message, thread_id=thread_id, thread_type=thread_type)
+
+            elif message.startswith("!refs"):
+                note_name = "references"
+                send = db.load(note_name, "refs.sqlite3")
+                self.send(Message(text=send), thread_id=thread_id, thread_type=thread_type)
 
             # elif message.startswith("!timeout"):
             #     thread = self.fetchThreadInfo(thread_id)[thread_id]
