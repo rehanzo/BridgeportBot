@@ -1,7 +1,6 @@
 from fbchat import log, Client, MessageReaction
 from fbchat.models import *
-from chatgpt import *
-import dotenv
+from chat import *
 import os
 import db
 import json
@@ -9,7 +8,7 @@ import time
 
 chat = None
 # Subclass fbchat.Client and override required methods
-class EchoBot(Client):
+class BPBot(Client):
     def onMessage(self, author_id, message_object, thread_id, thread_type, **kwargs):
         self.markAsDelivered(thread_id, message_object.uid)
         self.markAsRead(thread_id)
@@ -19,7 +18,8 @@ class EchoBot(Client):
         # client.reactToMessage(message_object.uid, MessageReaction.LOVE)
 
         # If you're not the author, echo
-        if author_id != self.uid:
+        gc_thread_id = os.environ["GROUPID"]
+        if author_id != self.uid and thread_id == gc_thread_id:
             #if "heart" in message_object.text:
             #    client.reactToMessage(message_object.uid, MessageReaction.LOVE)
             # self.send(message_object, thread_id=thread_id, thread_type=thread_type)
@@ -57,15 +57,23 @@ class EchoBot(Client):
 
                 self.send(Message(text=(note_name + " has been cleared.")), thread_id=thread_id, thread_type=thread_type)
 
-            elif message.startswith("!gpt"):
+            elif message.startswith("!chat"):
                 words.pop(0)
 
                 if chat == None:
-                    chat = ChatGPT()
+                    chat = Chat()
 
+                message = ""
+                limit = 1000
                 query = " ".join(words)
-                response = chat.gptResponse(query)
-                self.send(Message(text=response), thread_id=thread_id, thread_type=thread_type)
+
+                if len(words) >= limit:
+                    message = "Prompt too long (over {} words)".format(limit)
+                else:
+                    response = chat.gptResponse(query)
+                    message = Message(text=response)
+
+                self.send(message, thread_id=thread_id, thread_type=thread_type)
 
             elif message.startswith("!timeout"):
                 thread = self.fetchThreadInfo(thread_id)[thread_id]
@@ -86,11 +94,9 @@ except:
     # If it fails, never mind, we'll just login again
     pass
 
-dotenv.load_dotenv()
-
-hanzouser = os.environ["HANZOUSER"]
-hanzopass = os.environ["HANZOPASS"]
-client = EchoBot(hanzouser, hanzopass, session_cookies=cookies)
+bpuser = os.environ["BPBOTUSER"]
+bppass = os.environ["BPBOTPASS"]
+client = BPBot(bpuser, bppass, session_cookies=cookies)
 with open('session.json', 'w') as f:
     json.dump(client.getSession(), f)
 
