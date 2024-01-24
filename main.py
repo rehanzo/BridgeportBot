@@ -1,6 +1,7 @@
 from fbchat import log, Client, MessageReaction
 from fbchat.models import *
 from chat import *
+from summarizer import summarize
 import os
 import db
 import json
@@ -75,14 +76,26 @@ class BPBot(Client):
 
                 self.send(message, thread_id=thread_id, thread_type=thread_type)
 
-            elif message.startswith("!timeout"):
-                thread = self.fetchThreadInfo(thread_id)[thread_id]
-                print("thread's name: {}".format(thread.name))
-                print("thread's type: {}".format(thread.type))
+            elif message.startswith("!summarize"):
+                words.pop(0)
 
-                print(thread)
-                users = self.fetchAllUsersFromThreads([thread])
-                print(users)
+                url = " ".join(words)
+                # print("IN!")
+                # print("{}".format(url))
+
+                response = summarize(url)
+                message = Message(text=response)
+
+                self.send(message, thread_id=thread_id, thread_type=thread_type)
+
+            # elif message.startswith("!timeout"):
+            #     thread = self.fetchThreadInfo(thread_id)[thread_id]
+            #     print("thread's name: {}".format(thread.name))
+            #     print("thread's type: {}".format(thread.type))
+
+            #     print(thread)
+            #     users = self.fetchAllUsersFromThreads([thread])
+            #     print(users)
 
 
 cookies = {}
