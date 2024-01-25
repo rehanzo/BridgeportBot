@@ -153,7 +153,7 @@ except:
 
 bpuser = os.environ["BPBOTUSER"]
 bppass = os.environ["BPBOTPASS"]
-client = BPBot(bpuser, bppass, session_cookies=cookies)
+client = BPBot(" ", " ", session_cookies=cookies)
 with open('session.json', 'w') as f:
     json.dump(client.getSession(), f)
 
