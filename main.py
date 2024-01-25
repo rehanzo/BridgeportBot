@@ -83,8 +83,26 @@ class BPBot(Client):
                     chat = Chat()
 
                 query = " ".join(words)
+                query = "{}: {}".format(message_object.author, query)
+                # Gets the last 10 messages sent to the thread
+                messages = client.fetchThreadMessages(thread_id=thread_id, limit=20)
+                # Since the message come in reversed order, reverse them
+                messages.reverse()
 
-                response = chat.tycoResponse(query)
+                group = client.fetchGroupInfo(gc_thread_id)[gc_thread_id]
+                participant_ids = group.participants
+                users = [client.fetchThreadInfo(user_id)[user_id] for user_id in participant_ids]
+                user_dict = {user.uid: user.name for user in users}
+                context_messages = []
+
+                for m in messages:
+                    user_name = user_dict[m.author]
+                    if m.author != self.uid:
+                        context_messages.append({"role": "user", "content": "{}: {}".format(user_name, m.text)})
+                    else:
+                        context_messages.append({"role": "assistant", "content": m.text})
+
+                response = chat.tycoResponse(query, context_messages)
                 message = Message(text=response)
 
                 self.send(message, thread_id=thread_id, thread_type=thread_type)
