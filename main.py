@@ -82,7 +82,7 @@ class BPBot(Client):
                 if chat == None:
                     chat = Chat()
 
-                query = " ".join(words)
+                query = " ".join(word for word in words if not word.startswith('!'))
                 query = "{}: {}".format(message_object.author, query)
                 # Gets the last 10 messages sent to the thread
                 messages = client.fetchThreadMessages(thread_id=thread_id, limit=20)
@@ -153,7 +153,7 @@ except:
 
 bpuser = os.environ["BPBOTUSER"]
 bppass = os.environ["BPBOTPASS"]
-client = BPBot(" ", " ", session_cookies=cookies)
+client = BPBot(bpuser, bppass, session_cookies=cookies)
 with open('session.json', 'w') as f:
     json.dump(client.getSession(), f)
 
