@@ -84,28 +84,41 @@ class BPBot(Client):
                 if chat == None:
                     chat = Chat()
 
-                # Gets the last 10 messages sent to the thread
+                # Gets the last 20 messages sent to the thread
                 messages = client.fetchThreadMessages(thread_id=thread_id, limit=20)
+                # cut context based on reset
+                for i in range(len(messages)):
+                    m = messages[i]
+                    if m.text.startswith('!reset'):
+                        messages = messages[:i]
+                        break
                 # Since the message come in reversed order, reverse them
                 messages.reverse()
 
+                # create user_id to username dict
+                # fetchUserInfo works weird for groupchats, gotta run this workaround
                 group = client.fetchGroupInfo(gc_thread_id)[gc_thread_id]
                 participant_ids = group.participants
                 users = [client.fetchThreadInfo(user_id)[user_id] for user_id in participant_ids]
                 user_dict = {user.uid: user.name for user in users}
                 context_messages = []
 
+                # remove commands from messages
                 query = " ".join(word for word in words if not word.startswith('!'))
                 query = "{}: {}".format(user_dict[message_object.author], query)
 
                 for m in messages:
+                    # remove commands
+                    # text is None for some messages like images, replace with empty message
                     m_text = " ".join(word for word in m.text.split() if not word.startswith('!')) if m.text is not None else " "
+                    # .author returns id, convert to username
                     user_name = user_dict[m.author]
                     if m.author == self.uid:
                         m_split = m_text.split(":")
                         user_name = m_split[0]
                         m_split.pop(0)
                         m_text = " ".join(m_split)
+                        # if not us, it was another persona, treat it as seperate user
                         if user_name != "Tyco":
                             context_messages.append({"role": "user", "content": "{}: {}".format(user_name, m_text)})
                         else:
