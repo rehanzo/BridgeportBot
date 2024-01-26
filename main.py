@@ -26,6 +26,7 @@ class BPBot(Client):
             # self.send(message_object, thread_id=thread_id, thread_type=thread_type)
             message = message_object.text
             words = message.split()
+            persona = "BP Bot"
 
             if message.startswith("!notes set"):
                 words.pop(0)
@@ -72,11 +73,12 @@ class BPBot(Client):
                     message = "Prompt too long (over {} words)".format(limit)
                 else:
                     response = chat.chatResponse(query)
-                    message = Message(text=response)
+                    message = Message(text=persona + ":\n" + response)
 
                 self.send(message, thread_id=thread_id, thread_type=thread_type)
 
             elif message.startswith("!tyco"):
+                persona = "Tyco"
                 words.pop(0)
 
                 if chat == None:
@@ -96,14 +98,22 @@ class BPBot(Client):
                 context_messages = []
 
                 for m in messages:
+                    m_text = " ".join(word for word in m.text.split() if not word.startswith('!')) if m.text is not None else " "
                     user_name = user_dict[m.author]
-                    if m.author != self.uid:
-                        context_messages.append({"role": "user", "content": "{}: {}".format(user_name, m.text)})
+                    if m.author == self.uid:
+                        m_split = m_text.split(":")
+                        user_name = m_split[0]
+                        m_split.pop(0)
+                        m_text = " ".join(m_split)
+                        if user_name != "Tyco":
+                            context_messages.append({"role": "user", "content": "{}: {}".format(user_name, m_text)})
+                        else:
+                            context_messages.append({"role": "assistant", "content": m_text})
                     else:
-                        context_messages.append({"role": "assistant", "content": m.text})
+                        context_messages.append({"role": "user", "content": "{}: {}".format(user_name, m_text)})
 
                 response = chat.tycoResponse(query, context_messages)
-                message = Message(text=response)
+                message = Message(text=persona + ": " + response)
 
                 self.send(message, thread_id=thread_id, thread_type=thread_type)
 
@@ -113,7 +123,7 @@ class BPBot(Client):
                 url = " ".join(words)
 
                 response = summarize(url)
-                message = Message(text=response)
+                message = Message(text=persona + ":\n" + response)
 
                 self.send(message, thread_id=thread_id, thread_type=thread_type)
 
@@ -123,14 +133,14 @@ class BPBot(Client):
                 url = " ".join(words)
 
                 response = search(url)
-                message = Message(text=response)
+                message = Message(text=persona + ":\n" + response)
 
                 self.send(message, thread_id=thread_id, thread_type=thread_type)
 
             elif message.startswith("!refs"):
                 note_name = "references"
                 send = db.load(note_name, "refs.sqlite3")
-                self.send(Message(text=send), thread_id=thread_id, thread_type=thread_type)
+                self.send(Message(text=persona + ":\n" + send), thread_id=thread_id, thread_type=thread_type)
 
             # elif message.startswith("!timeout"):
             #     thread = self.fetchThreadInfo(thread_id)[thread_id]
