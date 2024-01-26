@@ -84,8 +84,6 @@ class BPBot(Client):
                 if chat == None:
                     chat = Chat()
 
-                query = " ".join(word for word in words if not word.startswith('!'))
-                query = "{}: {}".format(message_object.author, query)
                 # Gets the last 10 messages sent to the thread
                 messages = client.fetchThreadMessages(thread_id=thread_id, limit=20)
                 # Since the message come in reversed order, reverse them
@@ -96,6 +94,9 @@ class BPBot(Client):
                 users = [client.fetchThreadInfo(user_id)[user_id] for user_id in participant_ids]
                 user_dict = {user.uid: user.name for user in users}
                 context_messages = []
+
+                query = " ".join(word for word in words if not word.startswith('!'))
+                query = "{}: {}".format(user_dict[message_object.author], query)
 
                 for m in messages:
                     m_text = " ".join(word for word in m.text.split() if not word.startswith('!')) if m.text is not None else " "
