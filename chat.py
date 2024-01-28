@@ -23,14 +23,36 @@ class Chat():
         )
         return completion.choices[0].message.content
 
-    def chatResponse(self, query: str) -> str:
+    def mistralResponse(self, query: str) -> str:
         completion = self.client.chat.completions.create(
             model="mistralai/mistral-medium",
             messages=[
-              {"role": "system", "content": f"You are Bridgeport Bot, a chatbot based on a large language model trained by Mistral. Carefully heed the user's instructions. Respond in plaintext"},
+              {"role": "system", "content": f"You are Bridgeport Bot, a chatbot for a groupchat. Carefully heed the user's instructions. Respond in plaintext"},
               {"role": "user", "content": f"{query}"}
             ],
             max_tokens=1000
+        )
+
+        return completion.choices[0].message.content
+
+    def imageResponse(self, url: str, query: str) -> str:
+        completion = self.client.chat.completions.create(
+          model="openai/gpt-4-vision-preview",
+          messages=[
+            {
+              "role": "user",
+              "content": [
+                {"type": "text", "text": f"{query}"},
+                {
+                  "type": "image_url",
+                  "image_url": {
+                    "url": f"{url}",
+                  },
+                },
+              ],
+            }
+          ],
+          max_tokens=300,
         )
 
         return completion.choices[0].message.content

@@ -8,6 +8,7 @@ import json
 import time
 import re
 from spotify import add_to_playlist
+import requests
 
 chat = None
 # Subclass fbchat.Client and override required methods
@@ -74,8 +75,22 @@ class BPBot(Client):
                 if len(words) >= limit:
                     message = "Prompt too long (over {} words)".format(limit)
                 else:
-                    response = chat.chatResponse(query)
-                    message = Message(text=persona + ":\n" + response)
+                    image_url = None
+                    # Check if the message is a reply
+                    if message_object.replied_to is not None:
+                        # Iterate over the attachments of the replied message
+                        for attachment in message_object.replied_to.attachments:
+                            # Check if the attachment is an image
+                            if isinstance(attachment, ImageAttachment):
+                                # Get the image URL
+                                image_url = client.fetchImageUrl(attachment.uid)
+                    if image_url is None:
+                        response = chat.mistralResponse(query)
+                        message = Message(text=persona + ":\n" + response)
+                    else:
+                        response = chat.imageResponse(image_url, query)
+                        message = Message(text=persona + ":\n" + response)
+                        
 
                 self.send(message, thread_id=thread_id, thread_type=thread_type)
 
