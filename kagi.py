@@ -2,27 +2,26 @@ import requests
 import os
 import db
 
+KAGI_TOKEN = os.environ["KAGI_TOKEN"] 
 def summarize(url):
-    token = os.environ["KAGI_TOKEN"]
     base_url = 'https://kagi.com/api/v0/summarize'
     params = {
         "url": f"{url}",
         "summary_type": "summary",
         "engine": "agnes"
     }
-    headers = {'Authorization': f'Bot {token}'}
+    headers = {'Authorization': f'Bot {KAGI_TOKEN}'}
 
     response = requests.get(base_url, headers=headers, params=params)
     response = response.json()
     return response['data']['output']
 
 def search(query):
-    token = os.environ["KAGI_TOKEN"]
     base_url = 'https://kagi.com/api/v0/fastgpt'
     data = {
         "query": f"{query}",
     }
-    headers = {'Authorization': f'Bot {token}'}
+    headers = {'Authorization': f'Bot {KAGI_TOKEN}'}
 
     response = requests.post(base_url, headers=headers, json=data)
     response = response.json()

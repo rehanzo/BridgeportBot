@@ -4,7 +4,7 @@ import os
 
 PLAYLIST_URL = os.environ['SPOTIFY_PLAYLIST_LINK']
 def add_to_playlist(song_url: str):
-    sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope="playlist-modify-public"))
+    sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope="playlist-modify-public", open_browser=False))
 
     track_urls = get_playlist_track_urls(sp)
 
