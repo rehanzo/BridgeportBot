@@ -6,6 +6,8 @@ import os
 import db
 import json
 import time
+import re
+from spotify import add_to_playlist
 
 chat = None
 # Subclass fbchat.Client and override required methods
@@ -154,7 +156,9 @@ class BPBot(Client):
             elif message.startswith("!refs"):
                 note_name = "references"
                 send = db.load(note_name, "refs.sqlite3")
-                self.send(Message(text=persona + ":\n" + send), thread_id=thread_id, thread_type=thread_type)
+                self.send(Message(text=persona + ":" + send), thread_id=thread_id, thread_type=thread_type)
+            elif match := re.search(r"https:\/\/open\.spotify\.com\/track\/[a-zA-Z0-9]{22}", message):
+                add_to_playlist(match.group())
 
             # elif message.startswith("!timeout"):
             #     thread = self.fetchThreadInfo(thread_id)[thread_id]
