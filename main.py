@@ -164,6 +164,9 @@ class BPBot(Client):
                 url = " ".join(words)
 
                 response = search(url)
+                # reponse comes back in markdown, using asterisks to bold and italicize
+                # this shows up properly on web messenger, but not on mobile, so let just remove it
+                response = response.replace('*', '')
                 message = Message(text=persona + ":\n" + response)
 
                 self.send(message, thread_id=thread_id, thread_type=thread_type)
@@ -172,6 +175,8 @@ class BPBot(Client):
                 note_name = "references"
                 send = db.load(note_name, "refs.sqlite3")
                 self.send(Message(text=persona + ":" + send), thread_id=thread_id, thread_type=thread_type)
+
+            # auto add spotify links to group playlist
             elif match := re.search(r"https:\/\/open\.spotify\.com\/track\/[a-zA-Z0-9]{22}", message):
                 add_to_playlist(match.group())
 
