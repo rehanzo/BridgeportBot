@@ -11,6 +11,15 @@ from spotify import add_to_playlist
 import requests
 
 chat = None
+def getImageAttachment(message_object):
+    if message_object is not None:
+        # Iterate over the attachments of the replied message
+        for attachment in message_object.attachments:
+            # Check if the attachment is an image
+            if isinstance(attachment, ImageAttachment):
+                return attachment
+    return None
+    
 # Subclass fbchat.Client and override required methods
 class BPBot(Client):
     def onMessage(self, author_id, message_object, thread_id, thread_type, **kwargs):
@@ -75,20 +84,12 @@ class BPBot(Client):
                 if len(words) >= limit:
                     message = "Prompt too long (over {} words)".format(limit)
                 else:
-                    image_url = None
-                    # Check if the message is a reply
-                    if message_object.replied_to is not None:
-                        # Iterate over the attachments of the replied message
-                        for attachment in message_object.replied_to.attachments:
-                            # Check if the attachment is an image
-                            if isinstance(attachment, ImageAttachment):
-                                # Get the image URL
-                                image_url = client.fetchImageUrl(attachment.uid)
-                    if image_url is None:
-                        response = chat.mistralResponse(query)
+                    if attachment := getImageAttachment(message_object.replied_to):
+                        image_url = client.fetchImageUrl(attachment.uid)
+                        response = chat.imageResponse(image_url, query)
                         message = Message(text=persona + ":\n" + response)
                     else:
-                        response = chat.imageResponse(image_url, query)
+                        response = chat.mistralResponse(query)
                         message = Message(text=persona + ":\n" + response)
                         
 
@@ -112,7 +113,7 @@ class BPBot(Client):
                 # Since the message come in reversed order, reverse them
                 messages.reverse()
 
-                # create user_id to username dict
+                # create 'user_id to username' dict
                 # fetchUserInfo works weird for groupchats, gotta run this workaround
                 group = client.fetchGroupInfo(gc_thread_id)[gc_thread_id]
                 participant_ids = group.participants
@@ -126,8 +127,12 @@ class BPBot(Client):
 
                 for m in messages:
                     # remove commands
-                    # text is None for some messages like images, replace with empty message
-                    m_text = " ".join(word for word in m.text.split() if not word.startswith('!')) if m.text is not None else " "
+                    # text is None for some messages, replace with empty message
+                    if getImageAttachment(m):
+                        m_text = "[IMAGE]"
+                    else:
+                        # filter command word if theres message text
+                        m_text = " ".join(word for word in m.text.split() if not word.startswith('!')) if m.text is not None else "[NON-TEXT MESSAGE]"
                     # .author returns id, convert to username
                     user_name = user_dict[m.author]
                     if m.author == self.uid:
