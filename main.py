@@ -102,8 +102,8 @@ class BPBot(Client):
                 if chat == None:
                     chat = Chat()
 
-                # Gets the last 20 messages sent to the thread
-                messages = client.fetchThreadMessages(thread_id=thread_id, limit=20)
+                # Gets the last x messages sent to the thread
+                messages = client.fetchThreadMessages(thread_id=thread_id, limit=40)
                 # cut context based on reset
                 for i in range(len(messages)):
                     m = messages[i]
