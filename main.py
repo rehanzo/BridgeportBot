@@ -11,6 +11,8 @@ from spotify import add_to_playlist
 import requests
 
 chat = None
+THREAD_ID = None
+THREAD_TYPE = None
 def getImageAttachment(message_object):
     if message_object is not None:
         # Iterate over the attachments of the replied message
@@ -22,17 +24,28 @@ def getImageAttachment(message_object):
     
 # Subclass fbchat.Client and override required methods
 class BPBot(Client):
+    def personaSend(self, persona, message):
+        self.send(Message(text=persona + ":\n" + message), thread_id=THREAD_ID, thread_type=THREAD_TYPE)
     def onMessage(self, author_id, message_object, thread_id, thread_type, **kwargs):
-        self.markAsDelivered(thread_id, message_object.uid)
-        self.markAsRead(thread_id)
         global chat
+        global THREAD_ID
+        global THREAD_TYPE
+        THREAD_ID = thread_id
+        THREAD_TYPE = thread_type
 
-        log.info("{} from {} in {}".format(message_object, thread_id, thread_type.name))
+        self.markAsDelivered(THREAD_ID, message_object.uid)
+        self.markAsRead(THREAD_ID)
+
+
+        log.info("{} from {} in {}".format(message_object, THREAD_ID, THREAD_TYPE.name))
         # client.reactToMessage(message_object.uid, MessageReaction.LOVE)
 
-        # If you're not the author, echo
+        # if message isn't text or doesn't start with '!', its none of our business (for now, anyways)
+        if not (message_object.text and message_object.text[0] == '!'):
+            return
+
         gc_thread_id = os.environ["GROUPID"]
-        if author_id != self.uid and thread_id == gc_thread_id:
+        if author_id != self.uid and THREAD_ID == gc_thread_id:
             #if "heart" in message_object.text:
             #    client.reactToMessage(message_object.uid, MessageReaction.LOVE)
             # self.send(message_object, thread_id=thread_id, thread_type=thread_type)
@@ -43,6 +56,7 @@ class BPBot(Client):
 
             match cmd:
                 case "!notes":
+                    persona = "Notes"
                     notes_cmd = words.pop(0)
                     match notes_cmd:
                         case "set":
@@ -58,30 +72,29 @@ class BPBot(Client):
                             else:
                                 reply = "Repond to the note you'd like to save"
 
-                            self.send(Message(text=reply), thread_id=thread_id, thread_type=thread_type)
+                            self.personaSend(persona, reply)
                     
 
                         case "get":
                             note_name = " ".join(words)
-                            send = db.load(note_name, "notes.sqlite3")
-                            self.send(Message(text=send), thread_id=thread_id, thread_type=thread_type)
+                            response = db.load(note_name, "notes.sqlite3")
+                            self.personaSend(persona, response)
 
                         case "list":
-                            send = db.keysList("notes.sqlite3")
-                            send = "Notes:\n" + send
-                            self.send(Message(text=send), thread_id=thread_id, thread_type=thread_type)
+                            response = db.keysList("notes.sqlite3")
+                            self.personaSend(persona, response)
 
                         case "clear":
                             note_name = words.pop(0)
                             db.clear(note_name, "notes.sqlite3")
 
-                            self.send(Message(text=(note_name + " has been cleared.")), thread_id=thread_id, thread_type=thread_type)
+                            self.personaSend(persona, note_name + " has been cleared.")
 
                 case "!chat":
                     if chat == None:
                         chat = Chat()
 
-                    message = ""
+                    response = ""
                     limit = 1000
                     query = " ".join(words)
 
@@ -91,13 +104,10 @@ class BPBot(Client):
                         if attachment := getImageAttachment(message_object.replied_to):
                             image_url = client.fetchImageUrl(attachment.uid)
                             response = chat.imageResponse(image_url, query)
-                            message = Message(text=persona + ":\n" + response)
                         else:
                             response = chat.mistralResponse(query)
-                            message = Message(text=persona + ":\n" + response)
                         
-
-                    self.send(message, thread_id=thread_id, thread_type=thread_type)
+                    self.personaSend(persona, response)
 
                 case "!tyco":
                     persona = "Tyco"
@@ -106,7 +116,7 @@ class BPBot(Client):
                         chat = Chat()
 
                     # Gets the last x messages sent to the thread
-                    messages = client.fetchThreadMessages(thread_id=thread_id, limit=40)
+                    messages = client.fetchThreadMessages(thread_id=THREAD_ID, limit=40)
                     # cut context based on reset
                     for i in range(len(messages)):
                         m = messages[i]
@@ -152,36 +162,29 @@ class BPBot(Client):
                             context_messages.append({"role": "user", "content": "{}: {}".format(user_name, m_text)})
 
                     response = chat.tycoResponse(query, context_messages)
-                    message = Message(text=persona + ": " + response)
-
-                    self.send(message, thread_id=thread_id, thread_type=thread_type)
+                    self.personaSend(persona, response)
 
                 case "!summarize":
                     url = " ".join(words)
-
                     response = summarize(url)
-                    message = Message(text=persona + ":\n" + response)
-
-                    self.send(message, thread_id=thread_id, thread_type=thread_type)
+                    self.personaSend(persona, response)
 
                 case "!search":
                     url = " ".join(words)
-
                     response = search(url)
                     # reponse comes back in markdown, using asterisks to bold and italicize
                     # this shows up properly on web messenger, but not on mobile, so let just remove it
                     response = response.replace('*', '')
-                    message = Message(text=persona + ":\n" + response)
-
-                    self.send(message, thread_id=thread_id, thread_type=thread_type)
+                    self.personaSend(persona, response)
 
                 case "!refs":
                     note_name = "references"
-                    send = db.load(note_name, "refs.sqlite3")
-                    self.send(Message(text=persona + ":" + send), thread_id=thread_id, thread_type=thread_type)
+                    response = db.load(note_name, "refs.sqlite3")
+                    self.personaSend(persona, response)
 
                 case "!test":
-                    self.send(Message(text=persona + ":" + "Hello"), thread_id=thread_id, thread_type=thread_type)
+                    persona = "Test"
+                    self.personaSend(persona, "Hello")
 
                 case _:
                     # auto add spotify links to group playlist
