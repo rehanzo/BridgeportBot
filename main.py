@@ -157,7 +157,6 @@ class BPBot(Client):
                     self.send(message, thread_id=thread_id, thread_type=thread_type)
 
                 case "!summarize":
-
                     url = " ".join(words)
 
                     response = summarize(url)
@@ -166,7 +165,6 @@ class BPBot(Client):
                     self.send(message, thread_id=thread_id, thread_type=thread_type)
 
                 case "!search":
-
                     url = " ".join(words)
 
                     response = search(url)
@@ -182,8 +180,11 @@ class BPBot(Client):
                     send = db.load(note_name, "refs.sqlite3")
                     self.send(Message(text=persona + ":" + send), thread_id=thread_id, thread_type=thread_type)
 
-                # auto add spotify links to group playlist
+                case "!test":
+                    self.send(Message(text=persona + ":" + "Hello"), thread_id=thread_id, thread_type=thread_type)
+
                 case _:
+                    # auto add spotify links to group playlist
                     if match := re.search(r"https:\/\/open\.spotify\.com\/track\/[a-zA-Z0-9]{22}", message):
                         add_to_playlist(match.group())
 
