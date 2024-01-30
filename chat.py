@@ -21,7 +21,7 @@ class Chat():
             presence_penalty=0.1,
             frequency_penalty=0.1
         )
-        return completion.choices[0].message.content
+        return completion.choices[0].message.content.strip()
 
     def mistralResponse(self, query: str) -> str:
         completion = self.client.chat.completions.create(
@@ -33,7 +33,7 @@ class Chat():
             max_tokens=1000
         )
 
-        return completion.choices[0].message.content
+        return completion.choices[0].message.content.strip()
 
     def imageResponse(self, url: str, query: str) -> str:
         completion = self.client.chat.completions.create(
@@ -55,4 +55,4 @@ class Chat():
           # max_tokens=300,
         )
 
-        return completion.choices[0].message.content
+        return completion.choices[0].message.content.strip()
