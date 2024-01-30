@@ -37,7 +37,7 @@ class Chat():
 
     def imageResponse(self, url: str, query: str) -> str:
         completion = self.client.chat.completions.create(
-          model="openai/gpt-4-vision-preview",
+          model="google/gemini-pro-vision",
           messages=[
             {
               "role": "user",
@@ -52,7 +52,7 @@ class Chat():
               ],
             }
           ],
-          max_tokens=300,
+          # max_tokens=300,
         )
 
         return completion.choices[0].message.content
