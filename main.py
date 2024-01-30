@@ -13,6 +13,7 @@ import requests
 chat = None
 THREAD_ID = None
 THREAD_TYPE = None
+GC_THREAD_ID = None
 def getImageAttachment(message_object):
     if message_object is not None:
         # Iterate over the attachments of the replied message
@@ -26,12 +27,63 @@ def getImageAttachment(message_object):
 class BPBot(Client):
     def personaSend(self, persona, message):
         self.send(Message(text=persona + ":\n" + message), thread_id=THREAD_ID, thread_type=THREAD_TYPE)
+
+    def getContext(self, words, message_object, persona) -> (str, str):
+        # Gets the last x messages sent to the thread
+        messages = client.fetchThreadMessages(thread_id=THREAD_ID, limit=40)
+        # cut context based on reset
+        for i in range(len(messages)):
+            m = messages[i]
+            if m.text.startswith('!reset'):
+                messages = messages[:i]
+                break
+        # Since the message come in reversed order, reverse them
+        messages.reverse()
+
+        # create 'user_id to username' dict
+        # fetchUserInfo works weird for groupchats, gotta run this workaround
+        group = client.fetchGroupInfo(GC_THREAD_ID)[GC_THREAD_ID]
+        participant_ids = group.participants
+        users = [client.fetchThreadInfo(user_id)[user_id] for user_id in participant_ids]
+        user_dict = {user.uid: user.name for user in users}
+        context_messages = []
+
+        # remove commands from messages
+        query = " ".join(word for word in words if not word.startswith('!'))
+        query = "{}: {}".format(user_dict[message_object.author], query)
+
+        for m in messages:
+            # remove commands
+            # text is None for some messages, replace with empty message
+            if getImageAttachment(m):
+                m_text = "[IMAGE]"
+            else:
+                # filter command word if theres message text
+                m_text = " ".join(word for word in m.text.split() if not word.startswith('!')) if m.text is not None else "[NON-TEXT MESSAGE]"
+            # .author returns id, convert to username
+            user_name = user_dict[m.author]
+            if m.author == self.uid:
+                m_split = m_text.split(":")
+                user_name = m_split[0]
+                m_split.pop(0)
+                m_text = " ".join(m_split)
+                # if not us, it was another persona, treat it as seperate user
+                if user_name != persona:
+                    context_messages.append({"role": "user", "content": "{}: {}".format(user_name, m_text)})
+                else:
+                    context_messages.append({"role": "assistant", "content": m_text})
+            else:
+                context_messages.append({"role": "user", "content": "{}: {}".format(user_name, m_text)})
+        return (query, context_messages)
+
     def onMessage(self, author_id, message_object, thread_id, thread_type, **kwargs):
         global chat
         global THREAD_ID
         global THREAD_TYPE
+        global GC_THREAD_ID
         THREAD_ID = thread_id
         THREAD_TYPE = thread_type
+        GC_THREAD_ID = os.environ["GROUPID"]
 
         self.markAsDelivered(THREAD_ID, message_object.uid)
         self.markAsRead(THREAD_ID)
@@ -44,8 +96,7 @@ class BPBot(Client):
         if not (message_object.text and message_object.text[0] == '!'):
             return
 
-        gc_thread_id = os.environ["GROUPID"]
-        if author_id != self.uid and THREAD_ID == gc_thread_id:
+        if author_id != self.uid and THREAD_ID == GC_THREAD_ID:
             #if "heart" in message_object.text:
             #    client.reactToMessage(message_object.uid, MessageReaction.LOVE)
             # self.send(message_object, thread_id=thread_id, thread_type=thread_type)
@@ -114,54 +165,9 @@ class BPBot(Client):
 
                     if chat == None:
                         chat = Chat()
+                    (query, context) = self.getContext(words, message_object, persona)
 
-                    # Gets the last x messages sent to the thread
-                    messages = client.fetchThreadMessages(thread_id=THREAD_ID, limit=40)
-                    # cut context based on reset
-                    for i in range(len(messages)):
-                        m = messages[i]
-                        if m.text.startswith('!reset'):
-                            messages = messages[:i]
-                            break
-                    # Since the message come in reversed order, reverse them
-                    messages.reverse()
-
-                    # create 'user_id to username' dict
-                    # fetchUserInfo works weird for groupchats, gotta run this workaround
-                    group = client.fetchGroupInfo(gc_thread_id)[gc_thread_id]
-                    participant_ids = group.participants
-                    users = [client.fetchThreadInfo(user_id)[user_id] for user_id in participant_ids]
-                    user_dict = {user.uid: user.name for user in users}
-                    context_messages = []
-
-                    # remove commands from messages
-                    query = " ".join(word for word in words if not word.startswith('!'))
-                    query = "{}: {}".format(user_dict[message_object.author], query)
-
-                    for m in messages:
-                        # remove commands
-                        # text is None for some messages, replace with empty message
-                        if getImageAttachment(m):
-                            m_text = "[IMAGE]"
-                        else:
-                            # filter command word if theres message text
-                            m_text = " ".join(word for word in m.text.split() if not word.startswith('!')) if m.text is not None else "[NON-TEXT MESSAGE]"
-                        # .author returns id, convert to username
-                        user_name = user_dict[m.author]
-                        if m.author == self.uid:
-                            m_split = m_text.split(":")
-                            user_name = m_split[0]
-                            m_split.pop(0)
-                            m_text = " ".join(m_split)
-                            # if not us, it was another persona, treat it as seperate user
-                            if user_name != persona:
-                                context_messages.append({"role": "user", "content": "{}: {}".format(user_name, m_text)})
-                            else:
-                                context_messages.append({"role": "assistant", "content": m_text})
-                        else:
-                            context_messages.append({"role": "user", "content": "{}: {}".format(user_name, m_text)})
-
-                    response = chat.tycoResponse(query, context_messages)
+                    response = chat.tycoResponse(query, context)
                     self.personaSend(persona, response)
 
                 case "!summarize":
