@@ -41,19 +41,29 @@ class BPBot(Client):
             persona = "BP Bot"
 
             if message.startswith("!notes set"):
-                words.pop(0)
-                words.pop(0)
+                reply = ""
+                if message_object.replied_to:
+                    if message_object.replied_to.text:
+                        words.pop(0)
+                        words.pop(0)
 
-                note_name = words.pop(0)
-                note_content = " ".join(words)
-                db.save(note_name, note_content, "notes.sqlite3")
-                self.send(Message(text=(note_name + " has been set.")), thread_id=thread_id, thread_type=thread_type)
+                        note_name = " ".join(words)
+                        note_content = message_object.replied_to.text
+                        db.save(note_name, note_content, "notes.sqlite3")
+                        reply = note_name + " has been set."
+                    else:
+                        reply = "Cannot get responded message text"
+                else:
+                    reply = "Repond to the note you'd like to save"
+
+                self.send(Message(text=reply), thread_id=thread_id, thread_type=thread_type)
+                    
 
             elif message.startswith("!notes get"):
                 words.pop(0)
                 words.pop(0)
 
-                note_name = words.pop(0)
+                note_name = " ".join(words)
                 send = db.load(note_name, "notes.sqlite3")
                 self.send(Message(text=send), thread_id=thread_id, thread_type=thread_type)
 
