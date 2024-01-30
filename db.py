@@ -11,6 +11,8 @@ def save(key, value, cache_file="cache.sqlite3"):
 def load(key, cache_file="cache.sqlite3"):
     try:
         with SqliteDict(cache_file) as db:
+            if key.isnumeric():
+                key = list(db.keys())[int(key)]
             value = db[key] # No need to use commit(), since we are only loading data!
         return value
     except Exception as ex:
@@ -26,9 +28,13 @@ def clear(key, cache_file="cache.sqlite3"):
 
 def keysList(cache_file="cache.sqlite3"):
     try:
+        finalStr = ""
         with SqliteDict(cache_file) as db:
-            pre = "  - "
-            finalStr = pre + ("\n" + pre).join(db.keys())
+            i = 0
+            for key in list(db.keys()):
+                pre = "{} - ".format(i)
+                finalStr += pre + key + "\n"
+                i += 1
         return finalStr
     except Exception as ex:
         print("Error during loading data:", ex)
