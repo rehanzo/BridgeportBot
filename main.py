@@ -9,11 +9,23 @@ import time
 import re
 from spotify import add_to_playlist
 import requests
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 chat = None
 THREAD_ID = None
 THREAD_TYPE = None
 GC_THREAD_ID = None
+
+async def async_wrapper(sync_func, *args, timeout_duration=20, **kwargs):
+    loop = asyncio.get_event_loop()
+    with ThreadPoolExecutor() as pool:
+        try:
+            # Use asyncio.wait_for to apply a timeout
+            return await asyncio.wait_for(loop.run_in_executor(pool, lambda: sync_func(*args, **kwargs)), timeout=timeout_duration)
+        except asyncio.TimeoutError:
+            return "Request timed out"
+
 def getImageAttachment(message_object):
     if message_object is not None:
         # Iterate over the attachments of the replied message
@@ -154,9 +166,9 @@ class BPBot(Client):
                     else:
                         if attachment := getImageAttachment(message_object.replied_to):
                             image_url = client.fetchImageUrl(attachment.uid)
-                            response = chat.imageResponse(image_url, query)
+                            response = asyncio.run(async_wrapper(chat.imageResponse, image_url, query))
                         else:
-                            response = chat.mistralResponse(query)
+                            response = asyncio.run(async_wrapper(chat.mistralResponse, query))
                         
                     self.personaSend(persona, response)
 
@@ -167,17 +179,17 @@ class BPBot(Client):
                         chat = Chat()
                     (query, context) = self.getContext(words, message_object, persona)
 
-                    response = chat.tycoResponse(query, context)
+                    response = asyncio.run(async_wrapper(chat.tycoResponse, query, context))
                     self.personaSend(persona, response)
 
                 case "!summarize":
                     url = " ".join(words)
-                    response = summarize(url)
+                    response = asyncio.run(async_wrapper(summarize, url))
                     self.personaSend(persona, response)
 
                 case "!search":
                     url = " ".join(words)
-                    response = search(url)
+                    response = asyncio.run(async_wrapper(search, url))
                     # reponse comes back in markdown, using asterisks to bold and italicize
                     # this shows up properly on web messenger, but not on mobile, so let just remove it
                     response = response.replace('*', '')
