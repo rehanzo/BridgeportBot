@@ -17,7 +17,7 @@ THREAD_ID = None
 THREAD_TYPE = None
 GC_THREAD_ID = None
 
-async def async_wrapper(sync_func, *args, timeout_duration=20, **kwargs):
+async def async_wrapper(sync_func, *args, timeout_duration=20, **kwargs) -> str:
     loop = asyncio.get_event_loop()
     with ThreadPoolExecutor() as pool:
         try:
@@ -46,7 +46,7 @@ class BPBot(Client):
         # cut context based on reset
         for i in range(len(messages)):
             m = messages[i]
-            if m.text.startswith('!reset'):
+            if m.text and m.text.startswith('!reset'):
                 messages = messages[:i]
                 break
         # Since the message come in reversed order, reverse them
