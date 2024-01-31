@@ -183,7 +183,11 @@ class BPBot(Client):
                     self.personaSend(persona, response)
 
                 case "!summarize":
-                    url = " ".join(words)
+                    if message_object.replied_to and message_object.replied_to.text:
+                        url = message_object.replied_to.text
+                    else:
+                        url = " ".join(words)
+                        
                     response = asyncio.run(async_wrapper(summarize, url))
                     self.personaSend(persona, response)
 
