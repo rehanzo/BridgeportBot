@@ -21,6 +21,8 @@ def load(key, cache_file="cache.sqlite3"):
 def clear(key, cache_file="cache.sqlite3"):
     try:
         with SqliteDict(cache_file) as db:
+            if key.isnumeric():
+                key = list(db.keys())[int(key)]
             db.pop(key)
             db.commit() # Need to commit() to actually flush the data
     except Exception as ex:
