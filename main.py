@@ -11,11 +11,13 @@ from spotify import add_to_playlist
 import requests
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from reminders import Reminders
+import signal
 
 chat = None
 THREAD_ID = None
 THREAD_TYPE = None
-GC_THREAD_ID = None
+GC_THREAD_ID = os.environ["GROUPID"]
 
 async def async_wrapper(sync_func, *args, timeout_duration=20, **kwargs) -> str:
     loop = asyncio.get_event_loop()
@@ -38,11 +40,11 @@ def getImageAttachment(message_object):
 # Subclass fbchat.Client and override required methods
 class BPBot(Client):
     def personaSend(self, persona, message):
-        self.send(Message(text=persona + ":\n" + message), thread_id=THREAD_ID, thread_type=THREAD_TYPE)
+        self.send(Message(text=persona + ":\n" + message), thread_id=GC_THREAD_ID, thread_type=ThreadType.GROUP)
 
     def getContext(self, words, message_object, persona) -> (str, str):
         # Gets the last x messages sent to the thread
-        messages = client.fetchThreadMessages(thread_id=THREAD_ID, limit=40)
+        messages = client.fetchThreadMessages(thread_id=GC_THREAD_ID, limit=40)
         # cut context based on reset
         for i in range(len(messages)):
             m = messages[i]
@@ -95,7 +97,7 @@ class BPBot(Client):
         global GC_THREAD_ID
         THREAD_ID = thread_id
         THREAD_TYPE = thread_type
-        GC_THREAD_ID = os.environ["GROUPID"]
+        # GC_THREAD_ID = os.environ["GROUPID"]
 
         self.markAsDelivered(THREAD_ID, message_object.uid)
         self.markAsRead(THREAD_ID)
@@ -208,6 +210,12 @@ class BPBot(Client):
                     persona = "Test"
                     self.personaSend(persona, "Hello")
 
+                case "!reminder":
+                    if message_object.replied_to and message_object.replied_to.text:
+                        reminder = message_object.replied_to.text
+                    time = " ".join(words)
+                    r.parse_command(reminder, time)
+
                 case _:
                     # auto add spotify links to group playlist
                     if match := re.search(r"https:\/\/open\.spotify\.com\/track\/[a-zA-Z0-9]{22}", message):
@@ -221,6 +229,7 @@ class BPBot(Client):
                     #     print(thread)
                     #     users = self.fetchAllUsersFromThreads([thread])
                     #     print(users)
+
 
 
 cookies = {}
@@ -237,5 +246,11 @@ bppass = os.environ["BPBOTPASS"]
 client = BPBot(bpuser, bppass, session_cookies=cookies)
 with open('session.json', 'w') as f:
     json.dump(client.getSession(), f)
+
+r = Reminders()
+r.start(client)
+signal.signal(signal.SIGINT, r.save_quit_reminders)  # Handle Ctrl+C
+signal.signal(signal.SIGTERM,r.save_quit_reminders) # Handle kill command
+signal.signal(signal.SIGHUP, r.save_quit_reminders)  # Handle terminal hangup
 
 client.listen()
