@@ -219,10 +219,22 @@ class BPBot(Client):
                     self.personaSend(persona, "Hello")
 
                 case "!reminder":
-                    if message_object.replied_to and message_object.replied_to.text:
-                        reminder = message_object.replied_to.text
-                    time = " ".join(words)
-                    r.parse_command(client, message_object.author, self.IDToUserNameDict()[message_object.author], reminder, time)
+                    persona = "Reminder"
+                    reminder_cmd = words.pop(0)
+                    match reminder_cmd:
+                        case "set":
+                            if message_object.replied_to and message_object.replied_to.text:
+                                reminder = message_object.replied_to.text
+                            time = " ".join(words)
+                            r.parse_command(client, message_object.author, self.IDToUserNameDict()[message_object.author], reminder, time)
+                        case "list":
+                            self.personaSend(persona, r.list_reminders())
+
+                        case "clear":
+                            id = int(words.pop(0))
+                            r.clear_reminder(id)
+
+                            self.personaSend(persona, f"{id} has been cleared.")
 
                 case _:
                     # auto add spotify links to group playlist
