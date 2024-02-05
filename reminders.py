@@ -3,6 +3,7 @@ import threading
 import time
 from ctparse import ctparse
 import pickle
+from fbchat.models import Mention
 
 class Reminders:
     def __init__(self):
@@ -14,30 +15,30 @@ class Reminders:
         except FileNotFoundError:
             self.reminders = []
 
-    def add_reminder(self, reminder_text, trigger_time):
-        self.reminders.append((reminder_text, trigger_time))
-        return f"Reminder set for: {trigger_time}"
-
     def check_reminders(self, client):
         while True:
             now = datetime.now()
             for reminder in self.reminders.copy():  # Use a copy of the list for safe removal
-                reminder_text, trigger_time = reminder
+                user_id, user_name, reminder_text, trigger_time = reminder
                 if now >= trigger_time:
-                    client.personaSend("Reminder", f"{reminder_text}")
+                    persona = "Reminder"
+                    mention = f"@{user_name}"
+                    mention_obj = Mention(thread_id=user_id, offset=len(persona) + 1, length=len(mention)+2)
+                    client.personaSend("Reminder", f"{mention}, {reminder_text}", mention=mention_obj)
                     self.reminders.remove(reminder)
             time.sleep(10)  # Check every 10 seconds
 
     def start(self, client):
         threading.Thread(target=self.check_reminders, args=[client], daemon=True).start()
 
-    def parse_command(self, reminder, time):
+    def parse_command(self, client, user_id, user_name, reminder, time):
         # Assuming command format: "Remind me to <task> at <natural language time>"
         result = ctparse(time)
         if result and result.resolution:
             # Assuming the result's resolution is a datetime object
             trigger_time = result.resolution.dt
-            self.add_reminder(reminder, trigger_time)
+            self.reminders.append((user_id, user_name, reminder, trigger_time))
+            client.personaSend("Reminder", f"'{reminder}' has been set for {trigger_time}")
         else:
             return "No valid time information found."
 

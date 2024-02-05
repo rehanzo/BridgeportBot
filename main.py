@@ -39,12 +39,25 @@ def getImageAttachment(message_object):
     
 # Subclass fbchat.Client and override required methods
 class BPBot(Client):
-    def personaSend(self, persona, message):
-        self.send(Message(text=persona + ":\n" + message), thread_id=GC_THREAD_ID, thread_type=ThreadType.GROUP)
+    def personaSend(self, persona, message, mention=None):
+        if mention:
+            self.send(Message(text=persona + ":\n" + message, mentions=[mention]), thread_id=GC_THREAD_ID, thread_type=ThreadType.GROUP)
+        else:
+            self.send(Message(text=persona + ":\n" + message), thread_id=GC_THREAD_ID, thread_type=ThreadType.GROUP)
+
+    def IDToUserNameDict(self):
+        # create 'user_id to username' dict
+        # fetchUserInfo works weird for groupchats, gotta run this workaround
+        group = self.fetchGroupInfo(GC_THREAD_ID)[GC_THREAD_ID]
+        participant_ids = group.participants
+        users = [self.fetchThreadInfo(user_id)[user_id] for user_id in participant_ids]
+        user_dict = {user.uid: user.name for user in users}
+
+        return user_dict
 
     def getContext(self, words, message_object, persona) -> (str, str):
         # Gets the last x messages sent to the thread
-        messages = client.fetchThreadMessages(thread_id=GC_THREAD_ID, limit=40)
+        messages = self.fetchThreadMessages(thread_id=GC_THREAD_ID, limit=30)
         # cut context based on reset
         for i in range(len(messages)):
             m = messages[i]
@@ -54,12 +67,7 @@ class BPBot(Client):
         # Since the message come in reversed order, reverse them
         messages.reverse()
 
-        # create 'user_id to username' dict
-        # fetchUserInfo works weird for groupchats, gotta run this workaround
-        group = client.fetchGroupInfo(GC_THREAD_ID)[GC_THREAD_ID]
-        participant_ids = group.participants
-        users = [client.fetchThreadInfo(user_id)[user_id] for user_id in participant_ids]
-        user_dict = {user.uid: user.name for user in users}
+        user_dict = self.IDToUserNameDict()
         context_messages = []
 
         # remove commands from messages
@@ -214,7 +222,7 @@ class BPBot(Client):
                     if message_object.replied_to and message_object.replied_to.text:
                         reminder = message_object.replied_to.text
                     time = " ".join(words)
-                    r.parse_command(reminder, time)
+                    r.parse_command(client, message_object.author, self.IDToUserNameDict()[message_object.author], reminder, time)
 
                 case _:
                     # auto add spotify links to group playlist
