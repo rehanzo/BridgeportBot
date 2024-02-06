@@ -182,6 +182,23 @@ class BPBot(Client):
                         
                     self.personaSend(persona, response)
 
+                case "!gpt":
+                    if chat == None:
+                        chat = Chat()
+
+                    response = ""
+                    limit = 1000
+                    query = " ".join(words)
+
+                    if len(words) >= limit:
+                        message = "Prompt too long (over {} words)".format(limit)
+                    else:
+                        if attachment := getImageAttachment(message_object.replied_to):
+                            image_url = client.fetchImageUrl(attachment.uid)
+                            response = asyncio.run(async_wrapper(chat.imageResponse, image_url, query, True))
+                        
+                    self.personaSend(persona, response)
+
                 case "!tyco":
                     persona = "Tyco"
 

@@ -35,9 +35,9 @@ class Chat():
 
         return completion.choices[0].message.content.strip()
 
-    def imageResponse(self, url: str, query: str) -> str:
+    def imageResponse(self, url: str, query: str, gpt=False) -> str:
         completion = self.client.chat.completions.create(
-          model="google/gemini-pro-vision",
+          model="openai/gpt-4-vision-preview" if gpt else "google/gemini-pro-vision",
           messages=[
             {
               "role": "user",
