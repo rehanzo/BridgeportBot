@@ -114,10 +114,6 @@ class BPBot(Client):
         log.info("{} from {} in {}".format(message_object, THREAD_ID, THREAD_TYPE.name))
         # client.reactToMessage(message_object.uid, MessageReaction.LOVE)
 
-        # if message isn't text or doesn't start with '!', its none of our business (for now, anyways)
-        if not (message_object.text and message_object.text[0] == '!'):
-            return
-
         if author_id != self.uid and THREAD_ID == GC_THREAD_ID:
             #if "heart" in message_object.text:
             #    client.reactToMessage(message_object.uid, MessageReaction.LOVE)
