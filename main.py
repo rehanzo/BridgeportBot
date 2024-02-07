@@ -163,7 +163,7 @@ class BPBot(Client):
 
                             self.personaSend(persona, note_name + " has been cleared.")
 
-                case "!chat":
+                case "!c":
                     if chat == None:
                         chat = Chat()
 
@@ -199,7 +199,7 @@ class BPBot(Client):
                         
                     self.personaSend(persona, response)
 
-                case "!tyco":
+                case "!t":
                     persona = "Tyco"
 
                     if chat == None:
@@ -218,7 +218,7 @@ class BPBot(Client):
                     response = asyncio.run(async_wrapper(summarize, url))
                     self.personaSend(persona, response)
 
-                case "!search":
+                case "!s":
                     url = " ".join(words)
                     response = asyncio.run(async_wrapper(search, url))
                     # reponse comes back in markdown, using asterisks to bold and italicize
@@ -235,7 +235,7 @@ class BPBot(Client):
                     persona = "Test"
                     self.personaSend(persona, "Hello")
 
-                case "!reminder":
+                case "!remind":
                     persona = "Reminder"
                     reminder_cmd = words.pop(0)
                     match reminder_cmd:
