@@ -253,6 +253,16 @@ class BPBot(Client):
 
                             self.personaSend(persona, f"{id} has been cleared.")
 
+                case "!p":
+                    if chat == None:
+                        chat = Chat()
+                    url = " ".join(words)
+                    response = asyncio.run(async_wrapper(chat.perplexityResponse, url))
+                    # reponse comes back in markdown, using asterisks to bold and italicize
+                    # this shows up properly on web messenger, but not on mobile, so let just remove it
+                    response = response.replace('*', '')
+                    self.personaSend(persona, response)
+
                 case _:
                     # auto add spotify links to group playlist
                     if match := re.search(r"https:\/\/open\.spotify\.com\/track\/[a-zA-Z0-9]{22}", message):

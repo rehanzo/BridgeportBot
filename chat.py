@@ -56,3 +56,14 @@ class Chat():
         )
 
         return completion.choices[0].message.content.strip()
+
+    def perplexityResponse(self, query: str) -> str:
+        completion = self.client.chat.completions.create(
+            model="perplexity/pplx-7b-online",
+            messages=[
+              {"role": "user", "content": f"{query}"}
+            ],
+            max_tokens=1000
+        )
+
+        return completion.choices[0].message.content.strip()
