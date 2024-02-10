@@ -1,5 +1,6 @@
-.env
+.envrc
 session.json
 *.sqlite3
-js/
+*.pkl
 __pycache__/
+session.json
