@@ -1,3 +1,7 @@
+# from dotenv import load_dotenv
+
+# # Load variables from .env file
+# load_dotenv()
 from fbchat import log, Client, MessageReaction
 from fbchat.models import *
 from chat import *
@@ -259,6 +263,46 @@ class BPBot(Client):
                     response = response.replace('*', '')
                     self.personaSend(persona, response)
 
+                case '!create':
+                    persona_name = words.pop(0)
+                    db.save(persona_name, ' '.join(words), "personas.sqlite3")
+
+                    response = f"{persona_name} is now alive. Type '& {persona_name} [your message]' to call them"
+                    self.personaSend('Creator', response)
+                
+                case "!personas":
+                    personas_cmd = words.pop(0)
+                    match personas_cmd:
+                        case "get":
+                            persona_name = " ".join(words)
+                            response = db.load(persona_name, "personas.sqlite3")
+                            self.personaSend(persona_name, response)
+
+                        case "list":
+                            response = db.keysList("personas.sqlite3")
+                            self.personaSend('All personas', response)
+
+                        case "clear":
+                            persona_name = words.pop(0)
+                            db.clear(persona_name, "personas.sqlite3")
+
+                            self.personaSend(persona, note_name + " has been cleared.")
+                
+                case '&':
+                    persona_name = words.pop(0)
+
+                    if chat == None:
+                        chat = Chat()
+                    (query, context) = self.getContext(words, message_object, persona)
+
+                     #Lookup this values from db by referncing persona name
+                    # persona_prompt = 'Respond in a patois only'   
+                    persona_prompt = db.load(persona_name, "personas.sqlite3") 
+                    print(persona_prompt)                 
+
+                    response = asyncio.run(async_wrapper(chat.personaResponse, persona_prompt, query, context))
+                    self.personaSend(persona_name, response)
+
                 case _:
                     # auto add spotify links to group playlist
                     if match := re.search(r"https:\/\/open\.spotify\.com\/track\/[a-zA-Z0-9]{22}", message):
@@ -294,6 +338,6 @@ r = Reminders()
 r.start(client)
 signal.signal(signal.SIGINT, r.save_quit_reminders)  # Handle Ctrl+C
 signal.signal(signal.SIGTERM,r.save_quit_reminders) # Handle kill command
-signal.signal(signal.SIGHUP, r.save_quit_reminders)  # Handle terminal hangup
+# signal.signal(signal.SIGHUP, r.save_quit_reminders)  # Handle terminal hangup
 
 client.listen()

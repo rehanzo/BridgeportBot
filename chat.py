@@ -10,6 +10,18 @@ class Chat():
             api_key=os.getenv("OPENROUTER_API_KEY"),
         )
 
+    def personaResponse(self, persona_prompt, query:str, context_messages) -> str:
+        completion = self.client.chat.completions.create(
+            model="teknium/openhermes-2.5-mistral-7b",
+            messages=[
+              {"role": "system", "content": persona_prompt}
+            ] + context_messages + [{"role": "user", "content": f"{query}"}],
+            temperature=0.88,
+            presence_penalty=0.1,
+            frequency_penalty=0.1
+        )
+        return completion.choices[0].message.content.strip()
+
     def tycoResponse(self, query: str, context_messages) -> str:
 
         completion = self.client.chat.completions.create(
