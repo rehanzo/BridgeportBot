@@ -75,7 +75,7 @@ class BPBot(Client):
         context_messages = []
 
         # remove commands from messages
-        query = " ".join(word for word in words if not word.startswith('!'))
+        query = " ".join(word for word in words if not (word.startswith('!') or word.startswith('@')))
         query = "{}: {}".format(user_dict[message_object.author], query)
 
         for m in messages:
@@ -91,7 +91,7 @@ class BPBot(Client):
                 m_text = "[IMAGE]: " + image_description
             else:
                 # filter command word if theres message text
-                m_text = " ".join(word for word in m.text.split() if not word.startswith('!')) if m.text is not None else "[NON-TEXT MESSAGE]"
+                m_text = " ".join(word for word in m.text.split() if not (word.startswith('!') or word.startswith('@'))) if m.text is not None else "[NON-TEXT MESSAGE]"
             # .author returns id, convert to username
             user_name = user_dict[m.author]
             if m.author == self.uid:
@@ -132,6 +132,7 @@ class BPBot(Client):
             words = message.split()
             persona = "BP Bot"
             cmd = words.pop(0)
+            first_char_of_cmd = cmd[0]
 
             match cmd:
                 case "!notes":
@@ -279,9 +280,17 @@ class BPBot(Client):
                 case "!personas":
                     personas_cmd = words.pop(0)
                     match personas_cmd:
+
+                        case 'create':
+                            persona_name = words.pop(0)
+                            db.save(persona_name.lower(), ' '.join(words), "personas.sqlite3")
+
+                            response = f"{persona_name} is now alive. Type '@{persona_name} [your message]' to call them."
+                            self.personaSend(persona, response)
+
                         case "get":
                             persona_name = " ".join(words)
-                            response = db.load(persona_name, "personas.sqlite3")
+                            response = db.load(persona_name.lower(), "personas.sqlite3")
                             self.personaSend(persona_name, response)
 
                         case "list":
@@ -290,25 +299,9 @@ class BPBot(Client):
 
                         case "clear":
                             persona_name = words.pop(0)
-                            db.clear(persona_name, "personas.sqlite3")
+                            db.clear(persona_name.lower(), "personas.sqlite3")
 
                             self.personaSend(persona, note_name + " has been cleared.")
-                
-                case '&':
-                    persona_name = words.pop(0)
-
-                    if chat == None:
-                        chat = Chat()
-                    (query, context) = self.getContext(words, message_object, persona)
-
-                     #Lookup this values from db by referncing persona name
-                    # persona_prompt = 'Respond in a patois only'   
-                    persona_prompt = db.load(persona_name, "personas.sqlite3") 
-                    print(persona_prompt)                 
-
-                    response = asyncio.run(async_wrapper(chat.personaResponse, persona_prompt, query, context))
-                    self.personaSend(persona_name, response)
-
                 case _:
                     # auto add spotify links to group playlist
                     if match := re.search(r"https:\/\/open\.spotify\.com\/track\/[a-zA-Z0-9]{22}", message):
@@ -322,7 +315,22 @@ class BPBot(Client):
                     #     print(thread)
                     #     users = self.fetchAllUsersFromThreads([thread])
                     #     print(users)
+                #for calls to personas in the format '@persona_name query'
+            if first_char_of_cmd == "@" and message_object.mentions == []:
+                persona_name = cmd[1:]
 
+                if chat == None:
+                    chat = Chat()
+                (query, context) = self.getContext(words, message_object, persona)
+
+                #Lookup system prompt from db by referncing persona name
+                persona_prompt = db.load(persona_name.lower(), "personas.sqlite3")
+
+                if persona_prompt is None:
+                    self.personaSend(persona, f'{persona_name} does not exist')      
+                else:
+                    response = asyncio.run(async_wrapper(chat.personaResponse, persona_prompt, query, context))
+                    self.personaSend(persona_name, response)      
 
 
 cookies = {}
