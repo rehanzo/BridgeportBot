@@ -4,3 +4,4 @@ session.json
 *.pkl
 __pycache__/
 session.json
+.env
