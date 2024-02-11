@@ -81,8 +81,14 @@ class BPBot(Client):
         for m in messages:
             # remove commands
             # text is None for some messages, replace with empty message
-            if getImageAttachment(m):
-                m_text = "[IMAGE]"
+            if attachment := getImageAttachment(m):
+                image_url = client.fetchImageUrl(attachment.uid)
+                image_description = db.load(image_url, "image_descs.sqlite3")
+                if not image_description:
+                    image_query = "Describe this image in detail"
+                    image_description = asyncio.run(async_wrapper(chat.imageResponse, image_url, image_query))
+                    db.save(image_url, image_description, "image_descs.sqlite3")
+                m_text = "[IMAGE]: " + image_description
             else:
                 # filter command word if theres message text
                 m_text = " ".join(word for word in m.text.split() if not word.startswith('!')) if m.text is not None else "[NON-TEXT MESSAGE]"
