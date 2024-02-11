@@ -17,6 +17,7 @@ def load(key, cache_file="cache.sqlite3"):
         return value
     except Exception as ex:
         print("Error during loading data:", ex)
+        return None
 
 def clear(key, cache_file="cache.sqlite3"):
     try:
