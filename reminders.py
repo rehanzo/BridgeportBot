@@ -13,7 +13,7 @@ class Reminders:
         try:
             with open(filename, 'rb') as f:
                 self.reminders = pickle.load(f)
-        except FileNotFoundError:
+        except Exception as e:
             self.reminders = []
 
     def check_reminders(self, client):
