@@ -19,6 +19,7 @@ from reminders import Reminders
 import signal
 
 chat = None
+message_count = 0
 THREAD_ID = None
 THREAD_TYPE = None
 GC_THREAD_ID = os.environ["GROUPID"]
@@ -59,24 +60,27 @@ class BPBot(Client):
 
         return user_dict
 
-    def getContext(self, words, message_object, persona) -> (str, str):
+    def getContext(self, words=None, message_object=None, persona=None):
+        # if all not none, its for a persona, and will process accordingly
+        # extra persona processing includes accounting for !reset and accounting for messages from persona itself
+        forPersona: bool = words and message_object and persona
+        user_dict = self.IDToUserNameDict()
         # Gets the last x messages sent to the thread
         messages = self.fetchThreadMessages(thread_id=GC_THREAD_ID, limit=30)
-        # cut context based on reset
-        for i in range(len(messages)):
-            m = messages[i]
-            if m.text and m.text.startswith('!reset'):
-                messages = messages[:i]
-                break
+        if forPersona:
+            # remove commands from messages
+            query = " ".join(word for word in words if not word.startswith('!'))
+            query = "{}: {}".format(user_dict[message_object.author], query)
+            # cut context based on reset
+            for i in range(len(messages)):
+                m = messages[i]
+                if m.text and m.text.startswith('!reset'):
+                    messages = messages[:i]
+                    break
         # Since the message come in reversed order, reverse them
         messages.reverse()
 
-        user_dict = self.IDToUserNameDict()
         context_messages = []
-
-        # remove commands from messages
-        query = " ".join(word for word in words if not (word.startswith('!') or word.startswith('@')))
-        query = "{}: {}".format(user_dict[message_object.author], query)
 
         for m in messages:
             # remove commands
@@ -94,10 +98,9 @@ class BPBot(Client):
                 m_text = " ".join(word for word in m.text.split() if not (word.startswith('!') or word.startswith('@'))) if m.text is not None else "[NON-TEXT MESSAGE]"
             # .author returns id, convert to username
             user_name = user_dict[m.author]
-            if m.author == self.uid:
+            if forPersona and m.author == self.uid:
                 m_split = m_text.split(":")
-                user_name = m_split[0]
-                m_split.pop(0)
+                user_name = m_split.pop(0)
                 m_text = " ".join(m_split)
                 # if not us, it was another persona, treat it as seperate user
                 if user_name != persona:
@@ -106,13 +109,15 @@ class BPBot(Client):
                     context_messages.append({"role": "assistant", "content": m_text})
             else:
                 context_messages.append({"role": "user", "content": "{}: {}".format(user_name, m_text)})
-        return (query, context_messages)
+
+        return (query, context_messages) if forPersona else context_messages
 
     def onMessage(self, author_id, message_object, thread_id, thread_type, **kwargs):
         global chat
         global THREAD_ID
         global THREAD_TYPE
         global GC_THREAD_ID
+        global message_count
         THREAD_ID = thread_id
         THREAD_TYPE = thread_type
         # GC_THREAD_ID = os.environ["GROUPID"]
@@ -318,6 +323,19 @@ class BPBot(Client):
                 #for calls to personas in the format '@persona_name query'
             if first_char_of_cmd == "@" and message_object.mentions == []:
                 persona_name = cmd[1:]
+                
+        message_count += 1
+        if message_count == 20:
+            message_count = 0
+
+            if chat == None:
+                chat = Chat()
+
+            context = self.getContext()
+
+            response = asyncio.run(async_wrapper(chat.GCSummarize, context))
+            # print(f"SUMMARY = {chat.GCSummary}")
+
 
                 if chat == None:
                     chat = Chat()
