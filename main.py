@@ -307,6 +307,10 @@ class BPBot(Client):
                             db.clear(persona_name.lower(), "personas.sqlite3")
 
                             self.personaSend(persona, note_name + " has been cleared.")
+                case "!summary":
+                    if chat == None:
+                        chat = Chat()
+                    self.personaSend(persona, chat.GCSummary)
                 case _:
                     # auto add spotify links to group playlist
                     if match := re.search(r"https:\/\/open\.spotify\.com\/track\/[a-zA-Z0-9]{22}", message):
