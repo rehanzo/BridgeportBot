@@ -92,7 +92,7 @@ class Chat():
 
     def GCSummarize(self, context_messages):
         completion = self.client.chat.completions.create(
-            model="teknium/openhermes-2.5-mistral-7b",
+            model="openai/gpt-3.5-turbo-0125",
             messages=[
               {"role": "system", "content": f"You will be given messages from a group chat in the format '[USER]: [MESSAGE]'. You will also be given a prior summary labelled 'SUMMARY: [SUMMARY]'. Update the given summary with information from the given messages, if the summary requires updating. Maintain an adequate balance between summary size and information captured. If the summary gets too large, start consolidating pieces of information together or begin dropping certain pieces of less relevant information."},
               {"role": "user", "content": f"SUMMARY: {self.GCSummary}"},
