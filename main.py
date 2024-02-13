@@ -38,7 +38,7 @@ def getImageAttachment(message_object):
         # Iterate over the attachments of the replied message
         for attachment in message_object.attachments:
             # Check if the attachment is an image
-            if isinstance(attachment, ImageAttachment):
+            if isinstance(attachment, ImageAttachment) and not attachment.is_animated:
                 return attachment
     return None
     
