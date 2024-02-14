@@ -20,6 +20,7 @@ import signal
 
 chat = None
 message_count = 0
+last_persona = None
 THREAD_ID = None
 THREAD_TYPE = None
 GC_THREAD_ID = os.environ["GROUPID"]
@@ -118,6 +119,7 @@ class BPBot(Client):
         global THREAD_TYPE
         global GC_THREAD_ID
         global message_count
+        global last_persona
         THREAD_ID = thread_id
         THREAD_TYPE = thread_type
         # GC_THREAD_ID = os.environ["GROUPID"]
@@ -326,7 +328,12 @@ class BPBot(Client):
                     #     print(users)
                 #for calls to personas in the format '@persona_name query'
             if first_char_of_cmd == "@" and message_object.mentions == []:
-                persona_name = cmd[1:]
+                # if just '@', use last persona
+                if cmd == "@" and last_persona is not None:
+                    persona_name = last_persona
+                else:
+                    persona_name = cmd[1:]
+                    last_persona = persona_name
                 if chat == None:
                     chat = Chat()
                 (query, context) = self.getContext(words, message_object, persona)
