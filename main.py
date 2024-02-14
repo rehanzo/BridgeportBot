@@ -20,7 +20,7 @@ import signal
 
 chat = None
 message_count = 0
-last_persona = None
+last_persona = db.load("last_persona", "misc.sqlite3")
 THREAD_ID = None
 THREAD_TYPE = None
 GC_THREAD_ID = os.environ["GROUPID"]
@@ -322,6 +322,7 @@ class BPBot(Client):
                 else:
                     persona_name = cmd[1:]
                     last_persona = persona_name
+                    db.save("last_persona", last_persona, "misc.sqlite3")
                 (query, context) = self.getContext(words, message_object, persona)
 
                 #Lookup system prompt from db by referncing persona name
