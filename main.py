@@ -178,9 +178,6 @@ class BPBot(Client):
                             self.personaSend(persona, note_name + " has been cleared.")
 
                 case "!c":
-                    if chat == None:
-                        chat = Chat()
-
                     response = ""
                     limit = 1000
                     query = " ".join(words)
@@ -197,9 +194,6 @@ class BPBot(Client):
                     self.personaSend(persona, response)
 
                 case "!gpt":
-                    if chat == None:
-                        chat = Chat()
-
                     response = ""
                     limit = 1000
                     query = " ".join(words)
@@ -216,8 +210,6 @@ class BPBot(Client):
                 case "!t":
                     persona = "Tyco"
 
-                    if chat == None:
-                        chat = Chat()
                     (query, context) = self.getContext(words, message_object, persona)
 
                     response = asyncio.run(async_wrapper(chat.tycoResponse, query, context))
@@ -268,8 +260,6 @@ class BPBot(Client):
                             self.personaSend(persona, f"{id} has been cleared.")
 
                 case "!p":
-                    if chat == None:
-                        chat = Chat()
                     url = " ".join(words)
                     response = asyncio.run(async_wrapper(chat.perplexityResponse, url))
                     # reponse comes back in markdown, using asterisks to bold and italicize
@@ -310,8 +300,6 @@ class BPBot(Client):
 
                             self.personaSend(persona, note_name + " has been cleared.")
                 case "!summary":
-                    if chat == None:
-                        chat = Chat()
                     self.personaSend(persona, chat.GCSummary)
                 case _:
                     # auto add spotify links to group playlist
@@ -334,8 +322,6 @@ class BPBot(Client):
                 else:
                     persona_name = cmd[1:]
                     last_persona = persona_name
-                if chat == None:
-                    chat = Chat()
                 (query, context) = self.getContext(words, message_object, persona)
 
                 #Lookup system prompt from db by referncing persona name
@@ -350,9 +336,6 @@ class BPBot(Client):
         message_count += 1
         if message_count == 20:
             message_count = 0
-
-            if chat == None:
-                chat = Chat()
 
             context = self.getContext()
 
@@ -382,5 +365,7 @@ r.start(client)
 signal.signal(signal.SIGINT, r.save_quit_reminders)  # Handle Ctrl+C
 signal.signal(signal.SIGTERM,r.save_quit_reminders) # Handle kill command
 # signal.signal(signal.SIGHUP, r.save_quit_reminders)  # Handle terminal hangup
+
+chat = Chat()
 
 client.listen()
