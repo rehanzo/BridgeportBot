@@ -94,7 +94,7 @@ class Chat():
         completion = self.client.chat.completions.create(
             model="openai/gpt-3.5-turbo-0125",
             messages=[
-              {"role": "system", "content": f"You will be given messages from a group chat in the format '[USER]: [MESSAGE]'. You will also be given a prior summary labelled 'SUMMARY: [SUMMARY]'. Update the given summary with information from the given messages, if the summary requires updating. Maintain an adequate balance between summary size and information captured. If the summary gets too large, start consolidating pieces of information together or begin dropping certain pieces of less relevant information."},
+              {"role": "system", "content": f"You will be given messages from a group chat in the format '[USER]: [MESSAGE]'. You will also be given a prior summary labelled 'SUMMARY: [SUMMARY]'. Update the given summary with information from the given messages, if the summary requires updating. Maintain an adequate balance between summary size and information captured. If the summary gets too large, start consolidating pieces of information together or begin dropping certain pieces of less relevant information. The summary you generate will contain information about the general happenings and vibe of the chat, and then you will get more detailed about more recent information."},
               {"role": "user", "content": f"SUMMARY: {self.GCSummary}"},
             ] + context_messages,
             max_tokens=2000
