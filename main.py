@@ -274,13 +274,6 @@ class BPBot(Client):
                     response = response.replace('*', '')
                     self.personaSend(persona, response)
 
-                case '!create':
-                    persona_name = words.pop(0)
-                    db.save(persona_name, ' '.join(words), "personas.sqlite3")
-
-                    response = f"{persona_name} is now alive. Type '& {persona_name} [your message]' to call them"
-                    self.personaSend('Creator', response)
-                
                 case "!personas":
                     # by itself, should list
                     try:
