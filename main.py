@@ -113,6 +113,12 @@ class BPBot(Client):
 
         return (query, context_messages) if forPersona else context_messages
 
+    def onReactionAdded(self, mid, reaction, author_id, thread_id, thread_type, ts, msg, **kwargs):
+        remove_reaction = MessageReaction.ANGRY
+
+        if reaction == remove_reaction:
+            self.unsend(mid)
+
     def onMessage(self, author_id, message_object, thread_id, thread_type, **kwargs):
         global chat
         global THREAD_ID
@@ -347,9 +353,6 @@ class BPBot(Client):
 
             response = asyncio.run(async_wrapper(chat.GCSummarize, context))
             # print(f"SUMMARY = {chat.GCSummary}")
-
-
-
 
 cookies = {}
 try:
