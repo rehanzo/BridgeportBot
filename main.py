@@ -144,7 +144,11 @@ class BPBot(Client):
             match cmd:
                 case "!notes":
                     persona = "Notes"
-                    notes_cmd = words.pop(0)
+                    # by itself, should list
+                    try:
+                        notes_cmd = words.pop(0)
+                    except:
+                        notes_cmd = "list"
                     match notes_cmd:
                         case "set":
                             reply = ""
@@ -243,7 +247,10 @@ class BPBot(Client):
 
                 case "!remind":
                     persona = "Reminder"
-                    reminder_cmd = words.pop(0)
+                    try:
+                        reminder_cmd = words.pop(0)
+                    except:
+                        reminder_cmd = "list"
                     match reminder_cmd:
                         case "set":
                             if message_object.replied_to and message_object.replied_to.text:
@@ -275,7 +282,12 @@ class BPBot(Client):
                     self.personaSend('Creator', response)
                 
                 case "!personas":
-                    personas_cmd = words.pop(0)
+                    # by itself, should list
+                    try:
+                        personas_cmd = words.pop(0)
+                    except: 
+                        personas_cmd = "list"
+
                     match personas_cmd:
 
                         case 'create':
