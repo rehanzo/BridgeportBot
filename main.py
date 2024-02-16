@@ -186,6 +186,13 @@ class BPBot(Client):
                             db.clear(note_name, "notes.sqlite3")
 
                             self.personaSend(persona, note_name + " has been cleared.")
+                        case "help":
+                            help_list = ["Commands:",
+                            "- set",
+                            "- get",
+                            "- list",
+                            "- clear"]
+                            self.personaSend(persona, "\n".join(help_list))
 
                 case "!c" | "!chat":
                     response = ""
@@ -234,7 +241,7 @@ class BPBot(Client):
                     response = asyncio.run(async_wrapper(summarize, url))
                     self.personaSend(persona, response)
 
-                case "!s":
+                case "!s" | "!search":
                     url = " ".join(words)
                     response = asyncio.run(async_wrapper(search, url))
                     # reponse comes back in markdown, using asterisks to bold and italicize
@@ -271,6 +278,12 @@ class BPBot(Client):
                             r.clear_reminder(id)
 
                             self.personaSend(persona, f"{id} has been cleared.")
+                        case "help":
+                            help_list = ["Commands:",
+                            "- set",
+                            "- list",
+                            "- clear"]
+                            self.personaSend(persona, "\n".join(help_list))
 
                 case "!p" | "!perplexity":
                     url = " ".join(words)
@@ -310,8 +323,31 @@ class BPBot(Client):
                             db.clear(persona_name.lower(), "personas.sqlite3")
 
                             self.personaSend(persona, note_name + " has been cleared.")
+                        case "help":
+                            help_list = ["Commands:",
+                            "- create",
+                            "- get",
+                            "- list",
+                            "- clear"]
+                            self.personaSend(persona, "\n".join(help_list))
                 case "!summary":
                     self.personaSend(persona, chat.GCSummary)
+                case "!help":
+                    help_list = ["Commands:",
+                    "- !(c)hat",
+                    "- !(t)yco",
+                    "- !(s)earch",
+                    "- !refs",
+                    "- !(p)erplexity",
+                    "- !personas",
+                    "- !notes",
+                    "- !gpt",
+                    "- !summarize",
+                    "- !remind",
+                    "- !summary",
+                    "- !test",
+                    "- @[persona]"]
+                    self.personaSend(persona, "\n".join(help_list))
                 case _:
                     # auto add spotify links to group playlist
                     if match := re.search(r"https:\/\/open\.spotify\.com\/track\/[a-zA-Z0-9]{22}", message):
