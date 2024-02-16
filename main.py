@@ -181,7 +181,7 @@ class BPBot(Client):
 
                             self.personaSend(persona, note_name + " has been cleared.")
 
-                case "!c":
+                case "!c" | "!chat":
                     response = ""
                     limit = 1000
                     query = " ".join(words)
@@ -211,7 +211,7 @@ class BPBot(Client):
                         
                     self.personaSend(persona, response)
 
-                case "!t":
+                case "!t" | "!tyco":
                     persona = "Tyco"
 
                     (query, context) = self.getContext(words, message_object, persona)
@@ -266,7 +266,7 @@ class BPBot(Client):
 
                             self.personaSend(persona, f"{id} has been cleared.")
 
-                case "!p":
+                case "!p" | "!perplexity":
                     url = " ".join(words)
                     response = asyncio.run(async_wrapper(chat.perplexityResponse, url))
                     # reponse comes back in markdown, using asterisks to bold and italicize
