@@ -14,20 +14,17 @@ class Chroma():
 
     def addMessages(self, messages):
         # messages - list of (author, message) pairs
-        ids = [f"{id}" for id in range(self.last_id + 1, len(messages) + 1)]
-        print(ids)
-        print(self.last_id)
-        print(len(messages))
-        self.last_id = ids[-1]
 
-        metadatas = [{"author": message[0]} for message in messages]
-        documents = [f"{message[0]}: {message[1]}" for message in messages]
+        documents = ""
+        for message in messages:
+            documents += f"{message[0]}: {message[1]}"
+            documents += "\n"
 
         self.collection.add(
             documents=documents,
-            metadatas=metadatas,
-            ids=ids
+            ids=f"{self.last_id + 1}"
         )
+        self.last_id += 1
 
         # db.save("last_id", self.last_id)
 
@@ -35,5 +32,5 @@ class Chroma():
         return self.collection.query(
             query_texts=[query],
             include=["documents"],
-            n_results=1
+            n_results=3
         )
