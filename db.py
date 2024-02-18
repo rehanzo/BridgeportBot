@@ -1,6 +1,6 @@
 from sqlitedict import SqliteDict
 
-def save(key, value, cache_file="cache.sqlite3"):
+def save(key, value, cache_file="misc.sqlite3"):
     try:
         with SqliteDict(cache_file) as db:
             db[key] = value # Using dict[key] to store
@@ -8,7 +8,7 @@ def save(key, value, cache_file="cache.sqlite3"):
     except Exception as ex:
         print("Error during storing data (Possibly unsupported):", ex)
 
-def load(key, cache_file="cache.sqlite3"):
+def load(key, cache_file="misc.sqlite3"):
     try:
         with SqliteDict(cache_file) as db:
             if key.isnumeric():
@@ -19,7 +19,7 @@ def load(key, cache_file="cache.sqlite3"):
         print("Error during loading data:", ex)
         return None
 
-def clear(key, cache_file="cache.sqlite3"):
+def clear(key, cache_file="misc.sqlite3"):
     try:
         with SqliteDict(cache_file) as db:
             if key.isnumeric():
@@ -29,7 +29,7 @@ def clear(key, cache_file="cache.sqlite3"):
     except Exception as ex:
         print("Error during loading data:", ex)
 
-def keysList(cache_file="cache.sqlite3"):
+def keysList(cache_file="misc.sqlite3"):
     try:
         finalStr = ""
         with SqliteDict(cache_file) as db:
@@ -41,3 +41,12 @@ def keysList(cache_file="cache.sqlite3"):
         return finalStr
     except Exception as ex:
         print("Error during loading data:", ex)
+
+def numberToKey(number, cache_file="misc.sqlite3"):
+    try:
+        with SqliteDict(cache_file) as db:
+            key = list(db.keys())[int(number)]
+        return key
+    except Exception as ex:
+        print("Error during loading data:", ex)
+        return None

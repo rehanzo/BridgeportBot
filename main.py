@@ -369,6 +369,8 @@ class BPBot(Client):
                 else:
                     persona_name = cmd[1:]
                     last_persona = persona_name
+                    if persona_name.isnumeric():
+                        persona_name = db.numberToKey(persona_name, "personas.sqlite3")
                     db.save("last_persona", last_persona, "misc.sqlite3")
                 (query, context) = self.getContext(words, message_object, persona)
 
