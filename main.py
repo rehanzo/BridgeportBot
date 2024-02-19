@@ -372,7 +372,7 @@ class BPBot(Client):
                     if persona_name.isnumeric():
                         persona_name = db.numberToKey(persona_name, "personas.sqlite3")
                     db.save("last_persona", last_persona, "misc.sqlite3")
-                (query, context) = self.getContext(words, message_object, persona)
+                (query, context) = self.getContext(words, message_object, persona_name)
 
                 #Lookup system prompt from db by referncing persona name
                 persona_prompt = db.load(persona_name.lower(), "personas.sqlite3")
