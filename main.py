@@ -17,6 +17,7 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from reminders import Reminders
 import signal
+import chroma
 
 chat = None
 message_count = 0
@@ -61,23 +62,35 @@ class BPBot(Client):
 
         return user_dict
 
-    def getContext(self, words=None, message_object=None, persona=None):
+    def getContextLLM(self, words, message_object, persona):
+        context_pairs = self.getContextPairs()
+        # remove commands from messages
+        user_dict = self.IDToUserNameDict()
+        query = " ".join(word for word in words if not word.startswith('!'))
+        query = "{}: {}".format(user_dict[message_object.author], query)
+        # cut context based on reset
+        for i in range(len(context_pairs) - 1, -1, -1):
+            m = context_pairs[i]
+            if m[1].startswith('!reset'):
+                context_pairs = context_pairs[i + 1:]
+                break
+
+        context_messages = []
+        for user_name, message in context_pairs:
+            message = " ".join(word for word in message.split() if not (word.startswith('!') or word.startswith('@')))
+            if user_name != persona:
+                context_messages.append({"role": "user", "content": "{}: {}".format(user_name, message)})
+            else:
+                context_messages.append({"role": "assistant", "content": message})
+
+        return (query, context_messages)
+
+    def getContextPairs(self, n_messages=30):
         # if all not none, its for a persona, and will process accordingly
         # extra persona processing includes accounting for !reset and accounting for messages from persona itself
-        forPersona: bool = words and message_object and persona
         user_dict = self.IDToUserNameDict()
         # Gets the last x messages sent to the thread
-        messages = self.fetchThreadMessages(thread_id=GC_THREAD_ID, limit=30)
-        if forPersona:
-            # remove commands from messages
-            query = " ".join(word for word in words if not word.startswith('!'))
-            query = "{}: {}".format(user_dict[message_object.author], query)
-            # cut context based on reset
-            for i in range(len(messages)):
-                m = messages[i]
-                if m.text and m.text.startswith('!reset'):
-                    messages = messages[:i]
-                    break
+        messages = self.fetchThreadMessages(thread_id=GC_THREAD_ID, limit=n_messages)
         # Since the message come in reversed order, reverse them
         messages.reverse()
 
@@ -96,23 +109,20 @@ class BPBot(Client):
                 m_text = "[IMAGE]: " + image_description
             else:
                 # filter command word if theres message text
-                m_text = " ".join(word for word in m.text.split() if not (word.startswith('!') or word.startswith('@'))) if m.text is not None else "[NON-TEXT MESSAGE]"
+                m_text = m.text if m.text is not None else "[NON-TEXT MESSAGE]"
             # .author returns id, convert to username
             user_name = user_dict[m.author]
-            if forPersona and m.author == self.uid:
+            if m.author == self.uid:
+                # NOTE: this would probably error if the bot ever sent a 'non text message'. We don't have it send non text messages as of yet.
+                # NOTE: assumes "PERSONA: MESSAGE" template
                 m_split = m_text.split(":")
                 user_name = m_split.pop(0)
-                m_text = " ".join(m_split)
-                # if not us, it was another persona, treat it as seperate user
-                if user_name != persona:
-                    context_messages.append({"role": "user", "content": "{}: {}".format(user_name, m_text)})
-                else:
-                    context_messages.append({"role": "assistant", "content": m_text})
-            else:
-                context_messages.append({"role": "user", "content": "{}: {}".format(user_name, m_text)})
+                m_text = ":".join(m_split)
+            context_messages.append((user_name, m_text))
 
-        return (query, context_messages) if forPersona else context_messages
+        return context_messages
 
+        
     def onReactionAdded(self, mid, reaction, author_id, thread_id, thread_type, ts, msg, **kwargs):
         remove_reaction = MessageReaction.ANGRY
 
@@ -227,9 +237,10 @@ class BPBot(Client):
                 case "!t" | "!tyco":
                     persona = "Tyco"
 
-                    (query, context) = self.getContext(words, message_object, persona)
+                    (query, context) = self.getContextLLM(words, message_object, persona)
+                    historical = chroma_obj.query(query)
 
-                    response = asyncio.run(async_wrapper(chat.tycoResponse, query, context))
+                    response = asyncio.run(async_wrapper(chat.tycoResponse, query, context, historical))
                     self.personaSend(persona, response)
 
                 case "!summarize":
@@ -330,8 +341,6 @@ class BPBot(Client):
                             "- list",
                             "- clear"]
                             self.personaSend(persona, "\n".join(help_list))
-                case "!summary":
-                    self.personaSend(persona, chat.GCSummary)
                 case "!help":
                     help_list = ["Commands:",
                     "- !(c)hat",
@@ -344,7 +353,6 @@ class BPBot(Client):
                     "- !gpt",
                     "- !summarize",
                     "- !remind",
-                    "- !summary",
                     "- !test",
                     "- @[persona]"]
                     self.personaSend(persona, "\n".join(help_list))
@@ -372,7 +380,7 @@ class BPBot(Client):
                     if persona_name.isnumeric():
                         persona_name = db.numberToKey(persona_name, "personas.sqlite3")
                     db.save("last_persona", last_persona, "misc.sqlite3")
-                (query, context) = self.getContext(words, message_object, persona)
+                (query, context) = self.getContextLLM(words, message_object, persona)
 
                 #Lookup system prompt from db by referncing persona name
                 persona_prompt = db.load(persona_name.lower(), "personas.sqlite3")
@@ -380,17 +388,16 @@ class BPBot(Client):
                 if persona_prompt is None:
                     self.personaSend(persona, f'{persona_name} does not exist')      
                 else:
-                    response = asyncio.run(async_wrapper(chat.personaResponse, persona_prompt, query, context))
+                    historical = chroma_obj.query(query)
+                    response = asyncio.run(async_wrapper(chat.personaResponse, persona_prompt, query, context, historical))
                     self.personaSend(persona_name, response)      
                 
         message_count += 1
-        if message_count == 20:
+        slice_size = 20
+        if message_count == slice_size:
             message_count = 0
 
-            context = self.getContext()
-
-            response = asyncio.run(async_wrapper(chat.GCSummarize, context))
-            # print(f"SUMMARY = {chat.GCSummary}")
+            chroma_obj.addMessages(self.getContextPairs(slice_size))
 
 cookies = {}
 try:
@@ -414,5 +421,6 @@ signal.signal(signal.SIGTERM,r.save_quit_reminders) # Handle kill command
 # signal.signal(signal.SIGHUP, r.save_quit_reminders)  # Handle terminal hangup
 
 chat = Chat()
+chroma_obj = chroma.Chroma()
 
 client.listen()

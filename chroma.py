@@ -26,11 +26,11 @@ class Chroma():
         )
         self.last_id += 1
 
-        # db.save("last_id", self.last_id)
+        db.save("last_id", self.last_id)
 
     def query(self, query):
         return self.collection.query(
             query_texts=[query],
             include=["documents"],
             n_results=3
-        )
+        )["documents"][0]
