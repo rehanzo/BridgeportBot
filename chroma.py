@@ -18,7 +18,7 @@ class Chroma():
         documents = ""
         for message in messages:
             documents += f"{message[0]}: {message[1]}"
-            documents += "\n"
+            documents += "\t"
 
         self.collection.add(
             documents=documents,

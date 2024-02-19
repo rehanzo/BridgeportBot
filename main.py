@@ -399,7 +399,7 @@ class BPBot(Client):
                 
         message_count += 1
         db.save("message_count", message_count, "misc.sqlite3")
-        slice_size = 20
+        slice_size = 2
         if message_count == slice_size:
             message_count = 0
 
