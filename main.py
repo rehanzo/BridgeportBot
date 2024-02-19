@@ -19,7 +19,6 @@ from reminders import Reminders
 import signal
 
 chat = None
-message_count = 0
 last_persona = db.load("last_persona", "misc.sqlite3")
 THREAD_ID = None
 THREAD_TYPE = None
@@ -124,7 +123,6 @@ class BPBot(Client):
         global THREAD_ID
         global THREAD_TYPE
         global GC_THREAD_ID
-        global message_count
         global last_persona
         THREAD_ID = thread_id
         THREAD_TYPE = thread_type
@@ -330,8 +328,6 @@ class BPBot(Client):
                             "- list",
                             "- clear"]
                             self.personaSend(persona, "\n".join(help_list))
-                case "!summary":
-                    self.personaSend(persona, chat.GCSummary)
                 case "!help":
                     help_list = ["Commands:",
                     "- !(c)hat",
@@ -344,7 +340,6 @@ class BPBot(Client):
                     "- !gpt",
                     "- !summarize",
                     "- !remind",
-                    "- !summary",
                     "- !test",
                     "- @[persona]"]
                     self.personaSend(persona, "\n".join(help_list))
@@ -382,15 +377,6 @@ class BPBot(Client):
                 else:
                     response = asyncio.run(async_wrapper(chat.personaResponse, persona_prompt, query, context))
                     self.personaSend(persona_name, response)      
-                
-        message_count += 1
-        if message_count == 20:
-            message_count = 0
-
-            context = self.getContext()
-
-            response = asyncio.run(async_wrapper(chat.GCSummarize, context))
-            # print(f"SUMMARY = {chat.GCSummary}")
 
 cookies = {}
 try:
