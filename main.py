@@ -20,7 +20,8 @@ import signal
 import chroma
 
 chat = None
-message_count = 0
+message_count = db.load("message_count", "misc.sqlite3")
+message_count = message_count if message_count is not None else 0 
 last_persona = db.load("last_persona", "misc.sqlite3")
 THREAD_ID = None
 THREAD_TYPE = None
@@ -62,8 +63,9 @@ class BPBot(Client):
 
         return user_dict
 
-    def getContextLLM(self, words, message_object, persona):
-        context_pairs = self.getContextPairs()
+    def getContextLLM(self, words, message_object, persona, context_pairs=None):
+        if not context_pairs:
+            context_pairs = self.getContextPairs()
         # remove commands from messages
         user_dict = self.IDToUserNameDict()
         query = " ".join(word for word in words if not word.startswith('!'))
@@ -237,8 +239,9 @@ class BPBot(Client):
                 case "!t" | "!tyco":
                     persona = "Tyco"
 
-                    (query, context) = self.getContextLLM(words, message_object, persona)
-                    historical = chroma_obj.query(query)
+                    context_pairs = self.getContextPairs()
+                    (query, context) = self.getContextLLM(words, message_object, persona, context_pairs=context_pairs)
+                    historical = chroma_obj.query(query, context_pairs)
 
                     response = asyncio.run(async_wrapper(chat.tycoResponse, query, context, historical))
                     self.personaSend(persona, response)
@@ -380,7 +383,9 @@ class BPBot(Client):
                     if persona_name.isnumeric():
                         persona_name = db.numberToKey(persona_name, "personas.sqlite3")
                     db.save("last_persona", last_persona, "misc.sqlite3")
-                (query, context) = self.getContextLLM(words, message_object, persona)
+                context_pairs = self.getContextPairs()
+                (query, context) = self.getContextLLM(words, message_object, persona_name, context_pairs=context_pairs)
+                historical = chroma_obj.query(query, context_pairs)
 
                 #Lookup system prompt from db by referncing persona name
                 persona_prompt = db.load(persona_name.lower(), "personas.sqlite3")
@@ -388,11 +393,12 @@ class BPBot(Client):
                 if persona_prompt is None:
                     self.personaSend(persona, f'{persona_name} does not exist')      
                 else:
-                    historical = chroma_obj.query(query)
+                    historical = chroma_obj.query(query, context_pairs)
                     response = asyncio.run(async_wrapper(chat.personaResponse, persona_prompt, query, context, historical))
                     self.personaSend(persona_name, response)      
                 
         message_count += 1
+        db.save("message_count", message_count, "misc.sqlite3")
         slice_size = 20
         if message_count == slice_size:
             message_count = 0

@@ -48,7 +48,6 @@ class Chat():
             presence_penalty=0.1,
             frequency_penalty=0.1
         )
-        print(historicals + context_messages + [{"role": "user", "content": f"{query}"}])
         return completion.choices[0].message.content.strip()
 
     def mistralResponse(self, query: str) -> str:

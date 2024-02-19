@@ -28,9 +28,10 @@ class Chroma():
 
         db.save("last_id", self.last_id)
 
-    def query(self, query):
+    def query(self, query, context_pairs):
+        context = "\n".join(["{}: {}".format(author, message) for author, message in context_pairs])
         return self.collection.query(
-            query_texts=[query],
+            query_texts=[context, query],
             include=["documents"],
             n_results=3
         )["documents"][0]
