@@ -97,6 +97,8 @@ class BPBot(Client):
                 # filter command word if theres message text
                 m_text = " ".join(word for word in m.text.split() if not (word.startswith('!') or word.startswith('@'))) if m.text is not None else "[NON-TEXT MESSAGE]"
             # .author returns id, convert to username
+            if len(m_text) == 0:
+                continue
             user_name = user_dict[m.author]
             if forPersona and m.author == self.uid:
                 m_split = m_text.split(":")
@@ -110,6 +112,7 @@ class BPBot(Client):
             else:
                 context_messages.append({"role": "user", "content": "{}: {}".format(user_name, m_text)})
 
+        context_messages = context_messages[:len(context_messages) - 1]
         return (query, context_messages) if forPersona else context_messages
 
     def onReactionAdded(self, mid, reaction, author_id, thread_id, thread_type, ts, msg, **kwargs):
