@@ -351,6 +351,10 @@ class BPBot(Client):
                     if match := re.search(r"https:\/\/open\.spotify\.com\/track\/[a-zA-Z0-9]{22}", message):
                         add_to_playlist(match.group())
 
+                    # angry react to reels and shorts
+                    elif re.search(r"https?://(www\.)?instagram\.com/reel/[A-Za-z0-9-_]+/?", message) or re.search(r"https?://(www\.)?youtube\.com/shorts/[A-Za-z0-9-_]+", message):
+                        client.reactToMessage(message_object.uid, MessageReaction.ANGRY)
+
                     # elif message.startswith("!timeout"):
                     #     thread = self.fetchThreadInfo(thread_id)[thread_id]
                     #     print("thread's name: {}".format(thread.name))
