@@ -323,7 +323,7 @@ class BPBot(Client):
                             persona_name = words.pop(0)
                             db.clear(persona_name.lower(), "personas.sqlite3")
 
-                            self.personaSend(persona, note_name + " has been cleared.")
+                            self.personaSend(persona, persona_name + " has been cleared.")
                         case "help":
                             help_list = ["Commands:",
                             "- create",
