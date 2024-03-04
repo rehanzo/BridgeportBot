@@ -76,7 +76,7 @@ class Chat():
 
     def perplexityResponse(self, query: str) -> str:
         completion = self.client.chat.completions.create(
-            model="perplexity/pplx-7b-online",
+            model="perplexity/sonar-medium-online",
             messages=[
               {"role": "user", "content": f"{query}"}
             ],
