@@ -207,7 +207,7 @@ class BPBot(Client):
                             image_url = client.fetchImageUrl(attachment.uid)
                             response = asyncio.run(async_wrapper(chat.imageResponse, image_url, query))
                         else:
-                            response = asyncio.run(async_wrapper(chat.mistralResponse, query))
+                            response = asyncio.run(async_wrapper(chat.chatResponse, query))
                         
                     self.personaSend(persona, response)
 
