@@ -211,6 +211,12 @@ class BPBot(Client):
                         
                     self.personaSend(persona, response)
 
+                case "!f" | "!fast":
+                    (query, context) = self.getContext(words, message_object, persona)
+
+                    response = asyncio.run(async_wrapper(chat.fastResponse, query, context))
+                    self.personaSend(persona, response)
+
                 case "!gpt":
                     response = ""
                     limit = 1000
