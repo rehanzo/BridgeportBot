@@ -5,3 +5,4 @@ session.json
 __pycache__/
 session.json
 .env
+.direnv
