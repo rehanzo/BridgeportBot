@@ -4,7 +4,7 @@ version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
     "ctparse>=0.3.6",
-    "fbchat>=1.9.7",
+    "fbchat-muqit>=1.2.2",
     "openai>=2.38.0",
     "requests>=2.34.2",
     "spotipy>=2.26.0",
