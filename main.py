@@ -196,18 +196,6 @@ async def handle_message(message_object: Message):
             response = await async_wrapper(chat.fastResponse, query, context)
             await persona_send(persona, response)
 
-        case "!gpt":
-            response = ""
-            limit = 1000
-            query = " ".join(words)
-            if len(words) >= limit:
-                response = f"Prompt too long (over {limit} words)"
-            else:
-                attachment = get_image_attachment(replied)
-                if attachment:
-                    response = await async_wrapper(chat.imageResponse, image_url(attachment), query, True)
-            await persona_send(persona, response)
-
         case "!t" | "!tyco":
             persona = "Tyco"
             (query, context) = await get_context(words, message_object, persona)
@@ -266,12 +254,6 @@ async def handle_message(message_object: Message):
                     help_list = ["Commands:", "- set", "- list", "- clear"]
                     await persona_send(persona, "\n".join(help_list))
 
-        case "!p" | "!perplexity":
-            url = " ".join(words)
-            response = await async_wrapper(chat.perplexityResponse, url)
-            response = response.replace("*", "")
-            await persona_send(persona, response)
-
         case "!personas":
             try:
                 personas_cmd = words.pop(0)
@@ -304,10 +286,8 @@ async def handle_message(message_object: Message):
                 "- !(t)yco",
                 "- !(s)earch",
                 "- !refs",
-                "- !(p)erplexity",
                 "- !personas",
                 "- !notes",
-                "- !gpt",
                 "- !summarize",
                 "- !remind",
                 "- !test",
