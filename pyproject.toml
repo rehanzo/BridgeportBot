@@ -6,7 +6,11 @@ dependencies = [
     "ctparse>=0.3.6",
     "fbchat-muqit>=1.2.2",
     "openai>=2.38.0",
+    "openapi-client",
     "requests>=2.34.2",
     "spotipy>=2.26.0",
     "sqlitedict>=2.1.0",
 ]
+
+[tool.uv.sources]
+openapi-client = { git = "https://github.com/kagisearch/kagi-openapi-python.git" }

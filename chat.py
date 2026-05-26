@@ -1,6 +1,12 @@
-from openai import OpenAI
+import json
+import logging
 import os
+from concurrent.futures import ThreadPoolExecutor
+
+from openai import OpenAI
+
 import db
+from kagi import search_v1
 
 
 class Chat:
@@ -51,20 +57,87 @@ class Chat:
         )
         return completion.choices[0].message.content.strip()
 
-    def chatResponse(self, query: str) -> str:
-        completion = self.client.chat.completions.create(
-            model="moonshotai/kimi-k2",
-            messages=[
-                {
-                    "role": "system",
-                    "content": f"You are Bridgeport Bot, a chatbot for a groupchat. Carefully heed the user's instructions. Respond in plaintext",
+    def chatResponse(self, query: str, context_messages) -> str:
+        _SEARCH_TOOL = {
+            "type": "function",
+            "function": {
+                "name": "search",
+                "description": "Search the web for current information. Pass multiple queries to search in parallel.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "queries": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "One or more search queries to run.",
+                        },
+                    },
+                    "required": ["queries"],
                 },
-                {"role": "user", "content": f"{query}"},
-            ],
+            },
+        }
+
+        messages = [
+            {
+                "role": "system",
+                "content": "You are Bridgeport Bot, a bot in a group chat. Keep responses short and conversational — this is a chat, not an essay. Plaintext only, no markdown. You will be given recent chat history where each message is formatted as '[AUTHOR]: [MESSAGE]'. The final user message is the one directed at you.",
+            },
+        ] + context_messages + [{"role": "user", "content": query}]
+
+        logging.info("chatResponse: sending initial request\n%s", json.dumps(messages, indent=2))
+        response = self.client.chat.completions.create(
+            model="moonshotai/kimi-k2",
+            messages=messages,
+            tools=[_SEARCH_TOOL],
+            tool_choice="auto",
             max_tokens=1000,
         )
 
-        return completion.choices[0].message.content.strip()
+        msg = response.choices[0].message
+
+        if msg.tool_calls:
+            tool_call = msg.tool_calls[0]
+            queries = json.loads(tool_call.function.arguments)["queries"]
+            logging.info("chatResponse: searching %d queries in parallel: %s", len(queries), queries)
+
+            with ThreadPoolExecutor() as pool:
+                results = list(pool.map(search_v1, queries))
+
+            combined = "\n\n---\n\n".join(results)
+            logging.info("chatResponse: searches done, sending follow-up request")
+
+            messages.append({
+                "role": "assistant",
+                "content": msg.content,
+                "tool_calls": [
+                    {
+                        "id": tool_call.id,
+                        "type": "function",
+                        "function": {
+                            "name": tool_call.function.name,
+                            "arguments": tool_call.function.arguments,
+                        },
+                    }
+                ],
+            })
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "content": combined,
+            })
+
+            response = self.client.chat.completions.create(
+                model="moonshotai/kimi-k2",
+                messages=messages,
+                tools=[_SEARCH_TOOL],
+                tool_choice="none",
+                max_tokens=1000,
+            )
+            logging.info("chatResponse: done")
+            return response.choices[0].message.content.strip()
+
+        logging.info("chatResponse: no tool call, done")
+        return msg.content.strip()
 
     def fastResponse(self, query: str, context_messages) -> str:
         sysprompt = (

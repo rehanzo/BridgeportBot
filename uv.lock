@@ -191,6 +191,7 @@ dependencies = [
     { name = "ctparse" },
     { name = "fbchat-muqit" },
     { name = "openai" },
+    { name = "openapi-client" },
     { name = "requests" },
     { name = "spotipy" },
     { name = "sqlitedict" },
@@ -201,6 +202,7 @@ requires-dist = [
     { name = "ctparse", specifier = ">=0.3.6" },
     { name = "fbchat-muqit", specifier = ">=1.2.2" },
     { name = "openai", specifier = ">=2.38.0" },
+    { name = "openapi-client", git = "https://github.com/kagisearch/kagi-openapi-python.git" },
     { name = "requests", specifier = ">=2.34.2" },
     { name = "spotipy", specifier = ">=2.26.0" },
     { name = "sqlitedict", specifier = ">=2.1.0" },
@@ -751,6 +753,17 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/8f/12/cfa322c5f5dd8fa21aab9a7a8e979e7a11123800f86ca8d82eb68a83d213/openai-2.38.0.tar.gz", hash = "sha256:798694c6cf74145541fda94325b6f8f72d8e1fd0262cc137c8d728177a6a4ce3", size = 772764, upload-time = "2026-05-21T21:23:42.105Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0a/bf/ccff9be562e24207716d04ef9dc931c76aff0c89a7265da43e2104d7fe06/openai-2.38.0-py3-none-any.whl", hash = "sha256:ec6661c57b2dcc47414a767e6e3335c7ed3d19c9696999283a3c82e95c756a3c", size = 1344910, upload-time = "2026-05-21T21:23:39.636Z" },
+]
+
+[[package]]
+name = "openapi-client"
+version = "1.0.0"
+source = { git = "https://github.com/kagisearch/kagi-openapi-python.git#f35e2592cdd2ec56b5fd78b4a68fb28de15bfb25" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "python-dateutil" },
+    { name = "typing-extensions" },
+    { name = "urllib3" },
 ]
 
 [[package]]

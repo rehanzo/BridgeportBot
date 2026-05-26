@@ -1,8 +1,11 @@
 import asyncio
+import logging
 import os
 import re
 import signal
 from concurrent.futures import ThreadPoolExecutor
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 from fbchat_muqit import (
     Client,
@@ -68,18 +71,21 @@ async def id_to_username_dict() -> dict[str, str]:
 async def get_context(words=None, message_object: Message | None = None, persona: str | None = None):
     for_persona: bool = bool(words and message_object and persona)
     user_dict = await id_to_username_dict()
+    logging.debug("get_context: user_dict=%s", user_dict)
     messages = await client.fetch_thread_messages(GC_THREAD_ID, message_limit=30) or []
+    messages = sorted(messages, key=lambda m: m.timestamp)
 
     query = ""
     if for_persona:
         query = " ".join(word for word in words if not word.startswith("!"))
         query = "{}: {}".format(user_dict.get(str(message_object.sender_id), "?"), query)
+        reset_idx = None
         for i, m in enumerate(messages):
             if m.text and m.text.startswith("!reset"):
-                messages = messages[:i]
-                break
-
-    messages.reverse()
+                reset_idx = i
+        if reset_idx is not None:
+            logging.info("get_context: reset found at index %d, discarding prior messages", reset_idx)
+            messages = messages[reset_idx + 1:]
 
     context_messages = []
     for m in messages:
@@ -102,11 +108,12 @@ async def get_context(words=None, message_object: Message | None = None, persona
 
         sender_id = str(m.sender_id)
         user_name = user_dict.get(sender_id, "?")
+        if user_name == "?":
+            logging.warning("get_context: unknown sender_id=%s", sender_id)
 
         if for_persona and sender_id == client.uid:
-            m_split = m_text.split(":")
-            user_name = m_split.pop(0)
-            m_text = " ".join(m_split)
+            user_name, _, m_text = m_text.partition(":")
+            m_text = m_text.strip()
             if user_name != persona:
                 context_messages.append({"role": "user", "content": f"{user_name}: {m_text}"})
             else:
@@ -180,15 +187,16 @@ async def handle_message(message_object: Message):
         case "!c" | "!chat":
             response = ""
             limit = 1000
-            query = " ".join(words)
             if len(words) >= limit:
                 response = f"Prompt too long (over {limit} words)"
             else:
                 attachment = get_image_attachment(replied)
                 if attachment:
+                    query = " ".join(words)
                     response = await async_wrapper(chat.imageResponse, image_url(attachment), query)
                 else:
-                    response = await async_wrapper(chat.chatResponse, query)
+                    (query, context) = await get_context(words, message_object, persona)
+                    response = await async_wrapper(chat.chatResponse, query, context, timeout_duration=60)
             await persona_send(persona, response)
 
         case "!f" | "!fast":
