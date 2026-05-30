@@ -6,3 +6,4 @@ __pycache__/
 session.json
 .env
 .direnv
+ufc-facebook.json
