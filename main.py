@@ -31,16 +31,23 @@ reminders: Reminders
 last_persona = db.load("last_persona", "misc.sqlite3")
 
 
+# Shared pool for offloading blocking I/O (OpenAI/Kagi sync calls) off the
+# event loop. One pool reused across all calls — a per-call pool would lose
+# thread reuse and block the loop on shutdown(wait=True) when a call times out.
+_EXECUTOR = ThreadPoolExecutor(max_workers=8)
+
+
 async def async_wrapper(sync_func, *args, timeout_duration=20, **kwargs) -> str:
-    loop = asyncio.get_event_loop()
-    with ThreadPoolExecutor() as pool:
-        try:
-            return await asyncio.wait_for(
-                loop.run_in_executor(pool, lambda: sync_func(*args, **kwargs)),
-                timeout=timeout_duration,
-            )
-        except asyncio.TimeoutError:
-            return "Request timed out"
+    loop = asyncio.get_running_loop()
+    try:
+        return await asyncio.wait_for(
+            loop.run_in_executor(_EXECUTOR, lambda: sync_func(*args, **kwargs)),
+            timeout=timeout_duration,
+        )
+    except asyncio.TimeoutError:
+        # The worker thread keeps running and its result is discarded, but the
+        # event loop is freed immediately rather than blocking on pool teardown.
+        return "Request timed out"
 
 
 def get_image_attachment(message_object):
