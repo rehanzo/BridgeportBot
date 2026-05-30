@@ -318,7 +318,7 @@ async def handle_message(message_object: Message):
 
         case _:
             if match := re.search(r"https:\/\/open\.spotify\.com\/track\/[a-zA-Z0-9]{22}", message):
-                add_to_playlist(match.group())
+                await async_wrapper(add_to_playlist, match.group())
             elif re.search(r"https?://(www\.)?instagram\.com/reel/[A-Za-z0-9-_]+/?", message) or re.search(r"https?://(www\.)?youtube\.com/shorts/[A-Za-z0-9-_]+", message):
                 await fb(client.react("😡", message_object.id, thread_id))
 
