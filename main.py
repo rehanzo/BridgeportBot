@@ -341,12 +341,24 @@ async def main():
     async with Client(COOKIES_PATH) as c:
         client = c
 
+        # Hold strong refs to in-flight tasks — asyncio only keeps weak refs,
+        # so without this a handler could be GC'd mid-flight.
+        pending: set[asyncio.Task] = set()
+
+        def _log_task_error(task: asyncio.Task):
+            if not task.cancelled() and (exc := task.exception()) is not None:
+                print(f"handle_message error: {exc!r}")
+
         @client.event(EventType.MESSAGE)
         async def _on_message(message_object: Message):
-            try:
-                await handle_message(message_object)
-            except Exception as e:
-                print(f"handle_message error: {e!r}")
+            # Spawn a task instead of awaiting inline: the library drains events
+            # one at a time, so awaiting here would let one slow command block
+            # every other message. Concurrency is capped by the dispatcher's
+            # 25-permit semaphore.
+            task = asyncio.create_task(handle_message(message_object))
+            pending.add(task)
+            task.add_done_callback(pending.discard)
+            task.add_done_callback(_log_task_error)
 
         @client.event(EventType.MESSAGE_REACTION)
         async def _on_reaction(reaction: MessageReaction):
