@@ -2,7 +2,6 @@ import asyncio
 import logging
 import os
 import re
-import signal
 from concurrent.futures import ThreadPoolExecutor
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -19,7 +18,6 @@ from fbchat_muqit import (
 import db
 from chat import Chat
 from kagi import search, summarize
-from reminders import Reminders
 from spotify import add_to_playlist
 
 COOKIES_PATH = os.environ.get("FB_COOKIES_PATH", "ufc-facebook.json")
@@ -27,7 +25,6 @@ GC_THREAD_ID = os.environ["GROUPID"]
 
 chat: Chat
 client: Client
-reminders: Reminders
 last_persona = db.load("last_persona", "misc.sqlite3")
 
 
@@ -245,36 +242,6 @@ async def handle_message(message_object: Message):
             persona = "Test"
             await persona_send(persona, "Hello")
 
-        case "!remind":
-            persona = "Reminder"
-            try:
-                reminder_cmd = words.pop(0)
-            except IndexError:
-                reminder_cmd = "list"
-            match reminder_cmd:
-                case "set":
-                    reminder_text = ""
-                    if replied and replied.text:
-                        reminder_text = replied.text
-                    time_str = " ".join(words)
-                    user_dict = await id_to_username_dict()
-                    await reminders.parse_command(
-                        persona_send,
-                        author_id,
-                        user_dict.get(author_id, "?"),
-                        reminder_text,
-                        time_str,
-                    )
-                case "list":
-                    await persona_send(persona, reminders.list_reminders())
-                case "clear":
-                    rid = int(words.pop(0))
-                    reminders.clear_reminder(rid)
-                    await persona_send(persona, f"{rid} has been cleared.")
-                case "help":
-                    help_list = ["Commands:", "- set", "- list", "- clear"]
-                    await persona_send(persona, "\n".join(help_list))
-
         case "!personas":
             try:
                 personas_cmd = words.pop(0)
@@ -310,7 +277,6 @@ async def handle_message(message_object: Message):
                 "- !personas",
                 "- !notes",
                 "- !summarize",
-                "- !remind",
                 "- !test",
                 "- @[persona]",
             ]
@@ -346,10 +312,9 @@ async def handle_reaction(reaction: MessageReaction):
 
 
 async def main():
-    global chat, client, reminders
+    global chat, client
 
     chat = Chat()
-    reminders = Reminders()
 
     async with Client(COOKIES_PATH) as c:
         client = c
@@ -379,12 +344,6 @@ async def main():
                 await handle_reaction(reaction)
             except Exception as e:
                 print(f"handle_reaction error: {e!r}")
-
-        reminders.start(client, persona_send)
-
-        loop = asyncio.get_running_loop()
-        for sig in (signal.SIGINT, signal.SIGTERM):
-            loop.add_signal_handler(sig, reminders.save_quit_reminders)
 
         await client.listen()
 
