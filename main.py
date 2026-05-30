@@ -50,6 +50,12 @@ async def async_wrapper(sync_func, *args, timeout_duration=20, **kwargs) -> str:
         return "Request timed out"
 
 
+async def fb(coro, timeout: float = 15):
+    """Wrap a Facebook client network call with a timeout so a stalled request
+    raises (and gets logged by the handler) instead of hanging indefinitely."""
+    return await asyncio.wait_for(coro, timeout)
+
+
 def get_image_attachment(message_object):
     if message_object is None:
         return None
@@ -66,11 +72,11 @@ def image_url(attachment: ImageAttachment) -> str:
 async def persona_send(persona: str, message: str, mention: Mention | None = None):
     text = f"{persona}:\n{message}"
     mentions = [mention] if mention else None
-    await client.send_message(text, GC_THREAD_ID, mentions=mentions)
+    await fb(client.send_message(text, GC_THREAD_ID, mentions=mentions))
 
 
 async def id_to_username_dict() -> dict[str, str]:
-    threads = await client.fetch_thread_info([GC_THREAD_ID])
+    threads = await fb(client.fetch_thread_info([GC_THREAD_ID]))
     group = threads[0]
     return {str(u.id): u.name for u in (group.all_participants or ())}
 
@@ -79,7 +85,7 @@ async def get_context(words=None, message_object: Message | None = None, persona
     for_persona: bool = bool(words and message_object and persona)
     user_dict = await id_to_username_dict()
     logging.debug("get_context: user_dict=%s", user_dict)
-    messages = await client.fetch_thread_messages(GC_THREAD_ID, message_limit=30) or []
+    messages = await fb(client.fetch_thread_messages(GC_THREAD_ID, message_limit=30)) or []
     messages = sorted(messages, key=lambda m: m.timestamp)
 
     query = ""
@@ -138,7 +144,7 @@ async def handle_message(message_object: Message):
     author_id = str(message_object.sender_id)
     thread_id = str(message_object.thread_id)
 
-    await client.mark_as_read(thread_id)
+    await fb(client.mark_as_read(thread_id))
 
     if author_id == client.uid or thread_id != GC_THREAD_ID:
         return
@@ -314,7 +320,7 @@ async def handle_message(message_object: Message):
             if match := re.search(r"https:\/\/open\.spotify\.com\/track\/[a-zA-Z0-9]{22}", message):
                 add_to_playlist(match.group())
             elif re.search(r"https?://(www\.)?instagram\.com/reel/[A-Za-z0-9-_]+/?", message) or re.search(r"https?://(www\.)?youtube\.com/shorts/[A-Za-z0-9-_]+", message):
-                await client.react("😡", message_object.id, thread_id)
+                await fb(client.react("😡", message_object.id, thread_id))
 
     if first_char_of_cmd == "@" and not (message_object.mentions or []):
         if cmd == "@" and last_persona is not None:
@@ -336,7 +342,7 @@ async def handle_message(message_object: Message):
 
 async def handle_reaction(reaction: MessageReaction):
     if reaction.reaction == "😡":
-        await client.unsend(reaction.id, str(reaction.thread_id))
+        await fb(client.unsend(reaction.id, str(reaction.thread_id)))
 
 
 async def main():
