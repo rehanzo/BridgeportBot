@@ -16,7 +16,7 @@ from fbchat_muqit import (
 )
 
 import db
-from chat import Chat
+from chat import Chat, RESEARCH_PREFIX
 from kagi import search, summarize
 from spotify import add_to_playlist
 
@@ -124,6 +124,8 @@ async def get_context(words=None, message_object: Message | None = None, persona
         if for_persona and sender_id == client.uid:
             user_name, _, m_text = m_text.partition(":")
             m_text = m_text.strip()
+            if m_text.startswith(RESEARCH_PREFIX):
+                m_text = m_text[len(RESEARCH_PREFIX):].strip()
             if user_name != persona:
                 context_messages.append({"role": "user", "content": f"{user_name}: {m_text}"})
             else:

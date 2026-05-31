@@ -8,6 +8,11 @@ from openai import OpenAI
 import db
 from kagi import search_v1
 
+# Marker prepended to chat replies that used web search. Shown to users so they
+# know the answer was researched; stripped from history in get_context so it
+# doesn't leak into the model's context on later turns.
+RESEARCH_PREFIX = "Researched response:\n\n"
+
 
 class Chat:
     client = None
@@ -77,14 +82,20 @@ class Chat:
             },
         }
 
-        messages = [
-            {
-                "role": "system",
-                "content": "You are Bridgeport Bot, a bot in a group chat. Keep responses short and conversational — this is a chat, not an essay. Plaintext only, no markdown. You will be given recent chat history where each message is formatted as '[AUTHOR]: [MESSAGE]'. The final user message is the one directed at you.",
-            },
-        ] + context_messages + [{"role": "user", "content": query}]
+        messages = (
+            [
+                {
+                    "role": "system",
+                    "content": "You are Bridgeport Bot, a bot in a group chat. Keep responses short and conversational — this is a chat, not an essay. Plaintext only, no markdown. You will be given recent chat history where each message is formatted as '[AUTHOR]: [MESSAGE]'. The final user message is the one directed at you.",
+                },
+            ]
+            + context_messages
+            + [{"role": "user", "content": query}]
+        )
 
-        logging.info("chatResponse: sending initial request\n%s", json.dumps(messages, indent=2))
+        logging.info(
+            "chatResponse: sending initial request\n%s", json.dumps(messages, indent=2)
+        )
         response = self.client.chat.completions.create(
             model="moonshotai/kimi-k2",
             messages=messages,
@@ -98,7 +109,11 @@ class Chat:
         if msg.tool_calls:
             tool_call = msg.tool_calls[0]
             queries = json.loads(tool_call.function.arguments)["queries"]
-            logging.info("chatResponse: searching %d queries in parallel: %s", len(queries), queries)
+            logging.info(
+                "chatResponse: searching %d queries in parallel: %s",
+                len(queries),
+                queries,
+            )
 
             with ThreadPoolExecutor() as pool:
                 results = list(pool.map(search_v1, queries))
@@ -106,25 +121,29 @@ class Chat:
             combined = "\n\n---\n\n".join(results)
             logging.info("chatResponse: searches done, sending follow-up request")
 
-            messages.append({
-                "role": "assistant",
-                "content": msg.content,
-                "tool_calls": [
-                    {
-                        "id": tool_call.id,
-                        "type": "function",
-                        "function": {
-                            "name": tool_call.function.name,
-                            "arguments": tool_call.function.arguments,
-                        },
-                    }
-                ],
-            })
-            messages.append({
-                "role": "tool",
-                "tool_call_id": tool_call.id,
-                "content": combined,
-            })
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": msg.content,
+                    "tool_calls": [
+                        {
+                            "id": tool_call.id,
+                            "type": "function",
+                            "function": {
+                                "name": tool_call.function.name,
+                                "arguments": tool_call.function.arguments,
+                            },
+                        }
+                    ],
+                }
+            )
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": combined,
+                }
+            )
 
             response = self.client.chat.completions.create(
                 model="moonshotai/kimi-k2",
@@ -134,7 +153,7 @@ class Chat:
                 max_tokens=1000,
             )
             logging.info("chatResponse: done")
-            return response.choices[0].message.content.strip()
+            return f"{RESEARCH_PREFIX} " + response.choices[0].message.content.strip()
 
         logging.info("chatResponse: no tool call, done")
         return msg.content.strip()
@@ -179,4 +198,3 @@ class Chat:
         )
 
         return completion.choices[0].message.content.strip()
-
