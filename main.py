@@ -135,6 +135,36 @@ async def get_context(words=None, message_object: Message | None = None, persona
     return (query, context_messages) if for_persona else context_messages
 
 
+def bot_mentions(message_object: Message) -> list[Mention]:
+    """Real Messenger pings of the bot (e.g. @BP Bot), as opposed to the plain
+    text '@persona' convention which carries no structured mentions."""
+    return [m for m in (message_object.mentions or []) if str(m.user_id) == client.uid]
+
+
+def strip_mentions(text: str, mentions: list[Mention]) -> str:
+    """Remove the '@Name' spans of the given mentions from text. Processed in
+    reverse offset order so earlier offsets stay valid as we splice."""
+    for m in sorted(mentions, key=lambda m: m.offset, reverse=True):
+        text = text[: m.offset] + text[m.offset + m.length :]
+    return text.strip()
+
+
+async def chat_reply(words, message_object: Message, replied, persona="BP Bot"):
+    response = ""
+    limit = 1000
+    if len(words) >= limit:
+        response = f"Prompt too long (over {limit} words)"
+    else:
+        attachment = get_image_attachment(replied)
+        if attachment:
+            query = " ".join(words)
+            response = await async_wrapper(chat.imageResponse, image_url(attachment), query)
+        else:
+            (query, context) = await get_context(words, message_object, persona)
+            response = await async_wrapper(chat.chatResponse, query, context, timeout_duration=60)
+    await persona_send(persona, response)
+
+
 async def handle_message(message_object: Message):
     global last_persona
 
@@ -150,14 +180,29 @@ async def handle_message(message_object: Message):
     if not message:
         return
 
+    replied = message_object.replied_to_message
+
     words = message.split()
     if not words:
         return
+
+    # A real Messenger ping of the bot is treated as a !chat: strip the bot's
+    # own mention out of the text and feed the rest to the chat persona.
+    if pinged := bot_mentions(message_object):
+        query = strip_mentions(message, pinged)
+        await chat_reply(query.split(), message_object, replied)
+        return
+
+    # A reply to one of the bot's own messages is likewise treated as a !chat,
+    # unless the user typed an explicit command (! or @persona), which still
+    # wins — e.g. replying to the bot with '!notes set' to save its message.
+    if replied is not None and str(replied.sender_id) == client.uid and words[0][0] not in "!@":
+        await chat_reply(words, message_object, replied)
+        return
+
     persona = "BP Bot"
     cmd = words.pop(0)
     first_char_of_cmd = cmd[0]
-
-    replied = message_object.replied_to_message
 
     match cmd:
         case "!notes":
@@ -195,19 +240,7 @@ async def handle_message(message_object: Message):
                     await persona_send(persona, "\n".join(help_list))
 
         case "!c" | "!chat":
-            response = ""
-            limit = 1000
-            if len(words) >= limit:
-                response = f"Prompt too long (over {limit} words)"
-            else:
-                attachment = get_image_attachment(replied)
-                if attachment:
-                    query = " ".join(words)
-                    response = await async_wrapper(chat.imageResponse, image_url(attachment), query)
-                else:
-                    (query, context) = await get_context(words, message_object, persona)
-                    response = await async_wrapper(chat.chatResponse, query, context, timeout_duration=60)
-            await persona_send(persona, response)
+            await chat_reply(words, message_object, replied, persona)
 
         case "!f" | "!fast":
             (query, context) = await get_context(words, message_object, persona)
